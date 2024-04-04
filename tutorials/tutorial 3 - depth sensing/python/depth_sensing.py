@@ -23,6 +23,28 @@ import math
 import numpy as np
 import sys
 import math
+import cv2
+
+def cv2_imshow(a,window_name="image"):
+    """A replacement for cv2.imshow() for use in Jupyter notebooks.
+
+    Args:
+    a : np.ndarray. shape (N, M) or (N, M, 1) is an NxM grayscale image. shape
+      (N, M, 3) is an NxM BGR color image. shape (N, M, 4) is an NxM BGRA color
+      image.
+    """
+    # cv2 stores colors as BGR; convert to RGB
+    if a.ndim == 3:
+        a = a.clip(0, 255).astype('uint8')
+        if a.shape[2] == 4:
+            a = cv2.cvtColor(a, cv2.COLOR_BGRA2RGBA)
+        else:
+            a = cv2.cvtColor(a, cv2.COLOR_BGR2RGB)
+    if a.ndim == 2:
+        a = a.clip(100, 500).astype('uint8')
+    cv2.imshow(window_name, a)
+    cv2.waitKey(0)
+    cv2.destroyAllWindows()
 
 def main():
     # Create a Camera object
@@ -30,8 +52,9 @@ def main():
 
     # Create a InitParameters object and set configuration parameters
     init_params = sl.InitParameters()
-    init_params.depth_mode = sl.DEPTH_MODE.ULTRA  # Use ULTRA depth mode
+    init_params.depth_mode = sl.DEPTH_MODE.QUALITY  # Use ULTRA depth mode
     init_params.coordinate_units = sl.UNIT.MILLIMETER  # Use meter units (for depth measurements)
+    init_params.depth_minimum_distance = 10  # Set the minimum depth perception distance
 
     # Open the camera
     status = zed.open(init_params)
@@ -44,7 +67,9 @@ def main():
     
     i = 0
     image = sl.Mat()
+
     depth = sl.Mat()
+
     point_cloud = sl.Mat()
 
     mirror_ref = sl.Transform()
@@ -55,8 +80,14 @@ def main():
         if zed.grab(runtime_parameters) == sl.ERROR_CODE.SUCCESS:
             # Retrieve left image
             zed.retrieve_image(image, sl.VIEW.LEFT)
+            cv2_imshow(image.get_data(),window_name="left image")
+            zed.retrieve_image(image, sl.VIEW.RIGHT)
+            cv2_imshow(image.get_data(),window_name="right image")
+
             # Retrieve depth map. Depth is aligned on the left image
             zed.retrieve_measure(depth, sl.MEASURE.DEPTH)
+            cv2_imshow(depth.get_data(),window_name="depth map")
+
             # Retrieve colored point cloud. Point cloud is aligned on the left image.
             zed.retrieve_measure(point_cloud, sl.MEASURE.XYZRGBA)
 
