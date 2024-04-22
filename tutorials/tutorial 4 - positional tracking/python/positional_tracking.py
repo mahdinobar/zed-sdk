@@ -73,7 +73,7 @@ def main():
             oy = round(zed_pose.get_orientation(py_orientation).get()[1], 3)
             oz = round(zed_pose.get_orientation(py_orientation).get()[2], 3)
             ow = round(zed_pose.get_orientation(py_orientation).get()[3], 3)
-            print("Orientation: Ox: {0}, Oy: {1}, Oz {2}, Ow: {3}\n".format(ox, oy, oz, ow))
+            # print("Orientation: Ox: {0}, Oy: {1}, Oz {2}, Ow: {3}\n".format(ox, oy, oz, ow))
             
             if can_compute_imu:
                 zed.get_sensors_data(zed_sensors, sl.TIME_REFERENCE.IMAGE)
@@ -84,7 +84,7 @@ def main():
                 ax = round(acceleration[0], 3)
                 ay = round(acceleration[1], 3)
                 az = round(acceleration[2], 3)
-                print("IMU Acceleration: Ax: {0}, Ay: {1}, Az {2}\n".format(ax, ay, az))
+                # print("IMU Acceleration: Ax: {0}, Ay: {1}, Az {2}\n".format(ax, ay, az))
                 
                 #Display the IMU angular velocity
                 a_velocity = [0,0,0]
@@ -92,7 +92,7 @@ def main():
                 vx = round(a_velocity[0], 3)
                 vy = round(a_velocity[1], 3)
                 vz = round(a_velocity[2], 3)
-                print("IMU Angular Velocity: Vx: {0}, Vy: {1}, Vz {2}\n".format(vx, vy, vz))
+                # print("IMU Angular Velocity: Vx: {0}, Vy: {1}, Vz {2}\n".format(vx, vy, vz))
 
                 # Display the IMU orientation quaternion
                 zed_imu_pose = sl.Transform()
@@ -100,7 +100,7 @@ def main():
                 oy = round(zed_imu.get_pose(zed_imu_pose).get_orientation().get()[1], 3)
                 oz = round(zed_imu.get_pose(zed_imu_pose).get_orientation().get()[2], 3)
                 ow = round(zed_imu.get_pose(zed_imu_pose).get_orientation().get()[3], 3)
-                print("IMU Orientation: Ox: {0}, Oy: {1}, Oz {2}, Ow: {3}\n".format(ox, oy, oz, ow))
+                # print("IMU Orientation: Ox: {0}, Oy: {1}, Oz {2}, Ow: {3}\n".format(ox, oy, oz, ow))
 
             i = i + 1
     # Close the camera

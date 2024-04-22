@@ -52,9 +52,10 @@ def main():
 
     # Create a InitParameters object and set configuration parameters
     init_params = sl.InitParameters()
-    init_params.depth_mode = sl.DEPTH_MODE.QUALITY  # Use ULTRA depth mode
+    init_params.depth_mode = sl.DEPTH_MODE.NEURAL  # Use ULTRA depth mode
     init_params.coordinate_units = sl.UNIT.MILLIMETER  # Use meter units (for depth measurements)
-    init_params.depth_minimum_distance = 10  # Set the minimum depth perception distance
+    init_params.depth_minimum_distance = 100  # Set the minimum depth perception distance
+    init_params.depth_maximum_distance = 220  # Set the maximum depth perception distance
 
     # Open the camera
     status = zed.open(init_params)
@@ -75,7 +76,7 @@ def main():
     mirror_ref = sl.Transform()
     mirror_ref.set_translation(sl.Translation(2.75,4.0,0))
 
-    while i < 50:
+    while i < 2:
         # A new image is available if grab() returns SUCCESS
         if zed.grab(runtime_parameters) == sl.ERROR_CODE.SUCCESS:
             # Retrieve left image
