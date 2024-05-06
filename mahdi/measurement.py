@@ -43,7 +43,7 @@ def main():
     init_params.depth_mode = sl.DEPTH_MODE.NEURAL  # Use ULTRA depth mode
     init_params.coordinate_units = sl.UNIT.MILLIMETER  # Use meter units (for depth measurements)
     init_params.depth_minimum_distance = 100  # Set the minimum depth perception distance
-    init_params.depth_maximum_distance = 220  # Set the maximum depth perception distance
+    init_params.depth_maximum_distance = 250  # Set the maximum depth perception distance
     # Open the camera
     status = zed.open(init_params)
     if status != sl.ERROR_CODE.SUCCESS:  # Ensure the camera has opened succesfully
@@ -65,17 +65,17 @@ def main():
                 # Retrieve left image
                 zed.retrieve_image(image, sl.VIEW.LEFT)
                 cv2_imshow(image.get_data(), window_name="left image")
-                cv2.imwrite("/home/user/code/zed-sdk/mahdi/log/testl.jpg", image.get_data())
+                cv2.imwrite("/home/user/code/zed-sdk/mahdi/log/testl_2.jpg", image.get_data())
                 # detector = apriltag("tag36h11")
                 # detections = detector.detect(image)
                 zed.retrieve_image(image, sl.VIEW.RIGHT)
                 cv2_imshow(image.get_data(), window_name="right image")
-                cv2.imwrite("/home/user/code/zed-sdk/mahdi/log/testr.jpg", image.get_data())
+                cv2.imwrite("/home/user/code/zed-sdk/mahdi/log/testr_2.jpg", image.get_data())
                 # Retrieve depth map. Depth is aligned on the left image
                 zed.retrieve_measure(depth, sl.MEASURE.DEPTH)
                 cv2_imshow(depth.get_data(), window_name="depth map")
-                cv2.imwrite("/home/user/code/zed-sdk/mahdi/log/depth.jpg", depth.get_data())
-                np.save("/home/user/code/zed-sdk/mahdi/log/depth.npy", depth.get_data())
+                cv2.imwrite("/home/user/code/zed-sdk/mahdi/log/depth_2.jpg", depth.get_data())
+                np.save("/home/user/code/zed-sdk/mahdi/log/depth_2.npy", depth.get_data())
                 # Retrieve colored point cloud. Point cloud is aligned on the left image.
                 zed.retrieve_measure(point_cloud, sl.MEASURE.XYZRGBA)
                 # Get and print distance value in mm at the center of the image
@@ -97,9 +97,9 @@ def main():
 
 
 def detection():
-    img = cv2.imread("/home/user/code/zed-sdk/mahdi/log/testl.jpg", cv2.IMREAD_GRAYSCALE)
-    img_depth = cv2.imread("/home/user/code/zed-sdk/mahdi/log/depth.jpg", cv2.IMREAD_GRAYSCALE)
-    depth_data = np.load("/home/user/code/zed-sdk/mahdi/log/depth.npy")
+    img = cv2.imread("/home/user/code/zed-sdk/mahdi/log/testl_2.jpg", cv2.IMREAD_GRAYSCALE)
+    img_depth = cv2.imread("/home/user/code/zed-sdk/mahdi/log/depth_2.jpg", cv2.IMREAD_GRAYSCALE)
+    depth_data = np.load("/home/user/code/zed-sdk/mahdi/log/depth_2.npy")
 
     at_detector = Detector(searchpath=['apriltags'],
                            families='tag36h11',
@@ -133,8 +133,8 @@ def detection():
     k = cv2.waitKey(0)
     if k == 27:  # wait for ESC key to exit
         cv2.destroyAllWindows()
-    cv2.imwrite("/home/user/code/zed-sdk/mahdi/log/detection.jpg", color_img)
-    cv2.imwrite("/home/user/code/zed-sdk/mahdi/log/detection_marked_depth.jpg", img_depth)
+    cv2.imwrite("/home/user/code/zed-sdk/mahdi/log/detection_2.jpg", color_img)
+    cv2.imwrite("/home/user/code/zed-sdk/mahdi/log/detection_marked_depth_2.jpg", img_depth)
 
 
 if __name__ == "__main__":
