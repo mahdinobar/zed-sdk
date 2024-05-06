@@ -99,13 +99,14 @@ def main():
                 tag_idx+=1
             # delta_p_buffer=np.vstack((delta_p_buffer,delta_p))
             i += 1
-            zed.close()
             print("point_cloud_value = {} [mm].".format(point_cloud_value))
-            delta_p_camera_ee=point_cloud_value[1,:]- point_cloud_value[0,:]
+            delta_p_ee_object=point_cloud_value[1,:]- point_cloud_value[0,:]
             # we print the estimated relative xyz position of center of april tag square on cube of the conveyor belt
             # WITH RESPECT TO estimated center of april tag xyz position for the cube gripped by the robot had (as
             # estimation of the End Effector(ee) position)
-            print("+++++delta_p_ee_cube = {} [mm].".format(delta_p_camera_ee))
+            #TODO order of detection of cubes are not consistent and can randomnly change(so bellow is +-delta_p_ee_object)
+            print("+++++delta_p_ee_object = {} [mm].".format(delta_p_ee_object))
+    zed.close()
 
 if __name__ == "__main__":
     main()
