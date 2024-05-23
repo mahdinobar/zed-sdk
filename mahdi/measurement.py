@@ -112,7 +112,13 @@ def detection():
     tags = at_detector.detect(img, False, camera_params=None, )
     print(tags)
     color_img = cv2.cvtColor(img, cv2.COLOR_GRAY2RGB)
+    tag_idx=0
     for tag in tags:
+        cv2.putText(color_img, str(tag_idx),
+                    org=(tag.corners[tag_idx, 0].astype(int) + 10, tag.corners[tag_idx, 1].astype(int) + 10),
+                    fontFace=cv2.FONT_HERSHEY_SIMPLEX,
+                    fontScale=1.5,
+                    color=(0, 255, 0))
         for idx in range(len(tag.corners)):
             cv2.line(color_img, tuple(tag.corners[idx - 1, :].astype(int)), tuple(tag.corners[idx, :].astype(int)),
                      (0, 255, 0))
@@ -123,12 +129,18 @@ def detection():
             print("corner detected on image plane location = ({0:0.3f},{0:0.3f}) [pxls] with measured depth = {0:0.3f} [mm].".format(
                 tag.corners[idx, 0], tag.corners[idx, 1],
                 depth_data.T[tag.corners[idx, 0].astype(int), tag.corners[idx, 1].astype(int)]))
+            cv2.putText(color_img, str(idx),
+                        org=(tag.corners[idx, 0].astype(int) + 3, tag.corners[idx, 1].astype(int) + 3),
+                        fontFace=cv2.FONT_HERSHEY_SIMPLEX,
+                        fontScale=1,
+                        color=(255, 0, 0))
+        tag_idx+=1
+        # cv2.putText(color_img, str(tag.tag_id),
+        #             org=(tag.corners[0, 0].astype(int) + 10, tag.corners[0, 1].astype(int) + 10),
+        #             fontFace=cv2.FONT_HERSHEY_SIMPLEX,
+        #             fontScale=0.8,
+        #             color=(0, 0, 255))
 
-        cv2.putText(color_img, str(tag.tag_id),
-                    org=(tag.corners[0, 0].astype(int) + 10, tag.corners[0, 1].astype(int) + 10),
-                    fontFace=cv2.FONT_HERSHEY_SIMPLEX,
-                    fontScale=0.8,
-                    color=(0, 0, 255))
     cv2.imshow('Detected tags', color_img)
     k = cv2.waitKey(0)
     if k == 27:  # wait for ESC key to exit
