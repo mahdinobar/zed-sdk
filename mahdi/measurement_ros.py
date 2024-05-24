@@ -87,7 +87,7 @@ def main():
                     # print("corner detected with measured relative depth = {0:0.3f} [mm].".format(
                     #     depth.T[tag.corners[idx, 0].astype(int), tag.corners[idx, 1].astype(int)]))
                     print(
-                        "!!corner detected on image plane location = ({0:0.3f},{0:0.3f}) [pxls] with measured depth map value= {0:0.3f}.".format(
+                        "!!corner detected on image plane location = ({},{}) [pxls] with measured depth map value= {} [mm].".format(
                             tag.corners[idx, 0], tag.corners[idx, 1],
                             depth.numpy().T[tag.corners[idx, 0].astype(int), tag.corners[idx, 1].astype(int)]))
                     cv2.line(color_image, tuple(tag.corners[idx - 1, :].astype(int)),
@@ -103,59 +103,59 @@ def main():
                              tuple(tag.corners[idx, :].astype(int)),
                              (0, 255, 0))
                     cv2.drawMarker(depth.get_data(), tuple(tag.corners[idx, :].astype(int)), color=(255, 0, 0))
-                delta_p = np.append(delta_p, depth.numpy().T[
-                    np.mean(tag.corners, 0)[0].astype(int), np.mean(tag.corners, 0)[1].astype(int)])
-                print("estimated depth for the center of tag = {0:0.4f} [mm].".format(delta_p[-1]))
-                # # retrieve sensors data
-                # zed.get_sensors_data(sensors_data, sl.TIME_REFERENCE.IMAGE)
-                # # Extract IMU data
-                # imu_data = sensors_data.get_imu_data()
-                # print("imu_data.get_pose().m = ", imu_data.get_pose().m)
-                # # Retrieve colored point cloud. Point cloud is aligned on the left image.
-                # zed.retrieve_measure(point_cloud, sl.MEASURE.XYZRGBA)
-                # # Get and print distance value in mm at the center of the image
-                # # We measure the distance camera - object using Euclidean distance
-                # x = round(np.mean(tag.corners, 0)[0])
-                # y = round(np.mean(tag.corners, 0)[1])
-                # err, value = point_cloud.get_value(x, y)
-                # point_cloud_value[tag_idx, :] = value[0:3]
-                # print("value = {} [mm].".format(value))
-                # print("err = {}.".format(err))
-                # # estimate pixels of center of ee coordinate system at midpoint of the lower edge of the april tag on
-                # # the cube gripped by robot hand
-                # o_c_ee_uv = (tag.corners[0, :] + tag.corners[1, :]) / 2
-                # err, o_ee_c = point_cloud.get_value(round(o_c_ee_uv[0]), round(o_c_ee_uv[1]))
-                # err, ox = point_cloud.get_value(round(tag.corners[1, 0]), round(tag.corners[1, 1]))
-                # ox_ee_c = ox - o_ee_c
-                # err, oy = point_cloud.get_value(round(tag.corners[3, 0]), round(tag.corners[3, 1]))
-                # oy_ee_c = oy - o_ee_c
-                # oz_ee_c = np.cross(ox_ee_c[0:3], oy_ee_c[0:3])
-                # o_ee_c = o_ee_c[0:3]
-                # ox_ee_c = ox_ee_c[0:3] / np.linalg.norm(ox_ee_c[0:3])
-                # oy_ee_c = oy_ee_c[0:3] / np.linalg.norm(oy_ee_c[0:3])
-                # oz_ee_c = oz_ee_c[0:3] / np.linalg.norm(oz_ee_c[0:3])
-                # R = np.vstack((ox_ee_c - o_ee_c, oy_ee_c - o_ee_c, oz_ee_c - o_ee_c))
-                # T_c_ee = np.vstack((np.vstack((R, o_ee_c)).T,
-                #                     [0, 0, 0, 1]))  # [ox_c_c,oy_c_c,oz_c_c]R+o_ee_c=[ox_ee_c,oy_ee_c,oz_ee_c]
-                # print("++++++o_ee_c = ", o_ee_c)
-                # print("++++++T_c_ee = ", T_c_ee)
+                if tag_idx==0: #TODO make this and else conditions robust to order of tags
+                    # retrieve sensors data
+                    zed.get_sensors_data(sensors_data, sl.TIME_REFERENCE.IMAGE)
+                    # # Extract IMU data
+                    # imu_data = sensors_data.get_imu_data()
+                    # print("imu_data.get_pose().m = ", imu_data.get_pose().m)
+                    # Retrieve colored point cloud. Point cloud is aligned on the left image.
+                    zed.retrieve_measure(point_cloud, sl.MEASURE.XYZRGBA)
+                    # Get and print distance value in mm at the center of the image
+                    # We measure the position of the mid point of the lower edge of the apriltag
+                    x_t_ftc2_img, y_t_ftc2_img =(tag.corners[0] + tag.corners[2]) / 2
+                    err_t_ftc2_ca, t_ftc2_ca = point_cloud.get_value(int(x_t_ftc2_img), int(y_t_ftc2_img))
+                    t_ftc2_ca=t_ftc2_ca[0: 3]
+                    # point_cloud_value[tag_idx, :] = t_ftc2_ca[0:3]
+                    print("t_ftc2_ca = {} [mm].".format(t_ftc2_ca))
+                    print("err_t_ftc2_ca = {}.".format(err_t_ftc2_ca))
 
+                    x_y_ftc2_img, y_y_ftc2_img = tag.corners[2]
+                    err_y_ftc2_ca, y_ftc2_ca = point_cloud.get_value(int(x_y_ftc2_img), int(y_y_ftc2_img))
+                    y_ftc2_ca=y_ftc2_ca[0: 3]
+                    print("y_ftc2_ca = {} [mm].".format(y_ftc2_ca))
+                    print("err_y_ftc2_ca = {}.".format(err_y_ftc2_ca))
+
+                    x_c_tag_img, y_c_tag_img = np.mean(tag.corners,0)
+                    err_c_tag_ca, c_tag_ca = point_cloud.get_value(int(x_c_tag_img), int(y_c_tag_img))
+                    c_tag_ca=c_tag_ca[0: 3]
+                    print("y_c_tag_img = {} [mm].".format(y_c_tag_img))
+                    print("err_c_tag_ca = {}.".format(err_c_tag_ca))
+
+                    z_ftc2_ca = t_ftc2_ca + (t_ftc2_ca - c_tag_ca)
+
+                    x_ftc2_ca = np.cross(y_ftc2_ca, z_ftc2_ca)
+
+                    R=np.vstack((x_ftc2_ca - t_ftc2_ca, y_ftc2_ca - t_ftc2_ca, z_ftc2_ca - t_ftc2_ca))
+                    T_ca_ftc2=np.vstack((np.hstack((R, t_ftc2_ca.reshape(3, 1))), np.array([0, 0, 0, 1])))
+                elif tag_idx==1:
+                    zed.get_sensors_data(sensors_data, sl.TIME_REFERENCE.IMAGE)
+                    zed.retrieve_measure(point_cloud, sl.MEASURE.XYZRGBA)
+                    # get position of edge of apriltag in the corner of robot table
+                    x_p_obj_img, y_p_obj_img = tag.corners[2]
+                    err_p_obj_ca, p_obj_ca = point_cloud.get_value(int(x_p_obj_img), int(y_p_obj_img))
+                    p_obj_ca=p_obj_ca[0: 3]
+                    print("p_obj_ca = {} [mm].".format(p_obj_ca))
+                    print("err_p_obj_ca = {}.".format(err_p_obj_ca))
                 tag_idx += 1
-            # delta_p_buffer=np.vstack((delta_p_buffer,delta_p))
-            # print("point_cloud_value = {} [mm].".format(point_cloud_value))
-            # delta_p_ee_object = point_cloud_value[1, :] - point_cloud_value[0, :]
-            # # we print the estimated relative xyz position of center of april tag square on cube of the conveyor belt
-            # # WITH RESPECT TO estimated center of april tag xyz position for the cube gripped by the robot had (as
-            # # estimation of the End Effector(ee) position)
-            # if delta_p_ee_object[2] < 0:
-            #     delta_p_ee_object = -delta_p_ee_object
-            # print("delta_p_ee_object = {} [mm].".format(delta_p_ee_object))
+
             i += 1
             cv2_imshow(color_image, window_name="left image")
             cv2_imshow(depth.get_data(), window_name="depth map")
 
     zed.close()
+    return(p_obj_ca, T_ca_ftc2)
 
 
 if __name__ == "__main__":
-    main()
+    main(p_obj_ca, T_ca_ftc2)
