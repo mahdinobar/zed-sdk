@@ -42,8 +42,8 @@ def main():
     init_params = sl.InitParameters()
     init_params.depth_mode = sl.DEPTH_MODE.NEURAL  # Use ULTRA depth mode
     init_params.coordinate_units = sl.UNIT.MILLIMETER  # Use meter units (for depth measurements)
-    init_params.depth_minimum_distance = 110  # Set the minimum depth perception distance
-    init_params.depth_maximum_distance = 250  # Set the maximum depth perception distance
+    init_params.depth_minimum_distance = 150  # Set the minimum depth perception distance
+    init_params.depth_maximum_distance = 450  # Set the maximum depth perception distance
     # Open the camera
     status = zed.open(init_params)
     if status != sl.ERROR_CODE.SUCCESS:  # Ensure the camera has opened succesfully
@@ -158,4 +158,4 @@ def main():
 
 
 if __name__ == "__main__":
-    main(p_obj_ca, T_ca_ftc2)
+    p_obj_ca, T_ca_ftc2 = main()
