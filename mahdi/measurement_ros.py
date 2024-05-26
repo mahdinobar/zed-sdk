@@ -158,3 +158,7 @@ if __name__ == "__main__":
     T_ca_ftc2_buffer=np.array([])
     for i in range(1):
         p_obj_ca, T_ca_ftc2 = main()
+        print("+++++FINAL CAMERA OUTPUTS+++++".format(p_obj_ca))
+        print("p_obj_ca = {} [mm].".format(p_obj_ca))
+        print("T_ca_ftc2 =\n {}.".format(T_ca_ftc2))
+
