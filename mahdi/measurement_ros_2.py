@@ -8,6 +8,9 @@
 
 import rospy
 from sensor_msgs.msg import Image, PointCloud2
+from geometry_msgs.msg import Vector3
+from std_msgs.msg import Float64MultiArray
+
 from cv_bridge import CvBridge
 import numpy as np
 import ros_numpy
@@ -28,6 +31,8 @@ class Server:
                                refine_edges=1,
                                decode_sharpening=0.25,
                                debug=0)
+        self.T_ca_ftc2 = Float64MultiArray
+        self.p_obj_ca = Vector3
 
     def cv2_imshow(self, a, window_name="image"):
         """A replacement for cv2.imshow() for use in Jupyter notebooks.
@@ -50,6 +55,7 @@ class Server:
         cv2.destroyAllWindows()
 
     def gotdata(self, gray_image, color_image, point_cloud):
+        
         print("timestamp_gray_image={} [ns]".format(gray_image.header.stamp.nsecs))
         print("timestamp_color_image={} [ns]".format(color_image.header.stamp.nsecs))
         print("timestamp_point_cloud={} [ns]".format(point_cloud.header.stamp.nsecs))
@@ -125,6 +131,7 @@ class Server:
                 x_ftc2_ca = np.cross(y_ftc2_ca, z_ftc2_ca)
                 R=np.vstack((x_ftc2_ca - t_ftc2_ca, y_ftc2_ca - t_ftc2_ca, z_ftc2_ca - t_ftc2_ca))
                 T_ca_ftc2=np.vstack((np.hstack((R, t_ftc2_ca.reshape(3, 1))), np.array([0, 0, 0, 1])))
+                self.T_ca_ftc2.data = T_ca_ftc2.flatten()
             elif tag_idx==1:
                 # get position of edge of apriltag in the corner of robot table
                 x_p_obj_img, y_p_obj_img = tag.corners[2]
@@ -136,13 +143,20 @@ class Server:
                 Y = point_cloud.data[int(arrayPosY)]
                 Z = point_cloud.data[int(arrayPosZ)]
                 p_obj_ca = np.array([X, Y, Z])
+                self.p_obj_ca.x=p_obj_ca[0]
+                self.p_obj_ca.y=p_obj_ca[1]
+                self.p_obj_ca.z=p_obj_ca[2]
                 print("p_obj_ca = {} [mm].".format(p_obj_ca))
             tag_idx += 1
         self.cv2_imshow(color_image_copy, window_name="left image")
         print("=============================")
 
+
+
+
 if __name__ == '__main__':
-    rospy.init_node('listener')
+
+    rospy.init_node('my_node')
     server = Server()
 
     gray_image_listener = message_filters.Subscriber('/zedxm/zed_node/rgb/image_rect_gray', Image)
@@ -154,5 +168,19 @@ if __name__ == '__main__':
 
     ts.registerCallback(server.gotdata)
 
+    # publish p_obj_ca, T_ca_ftc2
+    pub_p_obj_ca = rospy.Publisher('p_obj_ca', Vector3, queue_size=10)
+    pub_T_ca_ftc2 = rospy.Publisher('T_ca_ftc2', Float64MultiArray, queue_size=10)
+    # rospy.init_node('talker', anonymous=True)
+    rate = rospy.Rate(10)  # 10hz
+
+    # hello_str = "hello world %s" % rospy.get_time()
+    # rospy.loginfo(hello_str)
+    pub_p_obj_ca.publish(server.p_obj_ca)
+    pub_T_ca_ftc2.publish(server.T_ca_ftc2)
+
     rospy.spin()
+
+
+
     
