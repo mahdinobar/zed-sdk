@@ -1,0 +1,868 @@
+    1  stat ~/Desktop/installer.sh 2> /dev/null | grep File 
+    2  bash ~/Desktop/installer.sh 
+    3  python eduroam-linux-Fachhochschule_Nordwestschweiz.py 
+    4  cd /usr/local/zed/tools/
+    5  ./ZED_Depth_Viewer 
+    6  sudo apt install terminator
+    7  cd 
+    8  cd Downloads/
+    9  sha256sum Miniconda3-latest-Linux-x86_64.sh 
+   10  bash Miniconda3-latest-Linux-x86_64.sh 
+   11  ls
+   12  pwd
+   13  mkdir code
+   14  ls
+   15  cd code/
+   16  git clone https://github.com/mahdinobar/zed-sdk.git
+   17  cd zed-sdk/
+   18  conda list
+   19  conda
+   20  which conda
+   21  source ~/.bashrc
+   22  conda
+   23  cd Downloads/
+   24  bash Miniconda3-latest-Linux-x86_64.sh 
+   25  ls
+   26  rm -r miniconda3
+   27  cd Downloads/
+   28  bash Miniconda3-latest-Linux-x86_64.sh 
+   29  sha256sum Miniconda3-latest-Linux-x86_64.sh 
+   30  bash Miniconda3-latest-Linux-x86_64.sh 
+   31  rm -r miniconda3
+   32  rm -r ../miniconda3
+   33  sha256sum Miniconda3-latest-Linux-x86_64.sh 
+   34  bash Miniconda3-latest-Linux-x86_64.sh 
+   35  uname -m
+   36  rm -r ../miniconda3
+   37  sha256sum Miniconda3-latest-Linux-aarch64.sh 
+   38  bash Miniconda3-latest-Linux-aarch64.sh 
+   39  conda list
+   40  conda 
+   41  ~/miniconda3/bin/conda init bash
+   42  conda 
+   43  conda list
+   44  sudo apt-cache show nvidia-jetpack | grep "Version"
+   45  cd Downloads/
+   46  ls
+   47  chmod +x ZED_SDK_Tegra_L4T35.3_v4.0.8.zstd.run 
+   48  ./ZED_SDK_Tegra_L4T35.3_v4.0.8.zstd.run 
+   49  conda deactivate
+   50  chmod +x ZED_SDK_Tegra_L4T35.3_v4.0.8.zstd.run 
+   51  ./ZED_SDK_Tegra_L4T35.3_v4.0.8.zstd.run 
+   52  apt-cache policy nvidia-jetpack
+   53  ZED_Sensor_Viewer 
+   54  ZED_Explorer 
+   55  ZED360 
+   56  ZEDfu 
+   57  ZED_SVO_Editor 
+   58  ZEDX_Daemon 
+   59  ZED_Diagnostic 
+   60  cd Downloads/
+   61  sudo tar xzf pycharm-community-2023.3.5.tar.gz -C /opt/
+   62  cd /opt/pycharm-community-2023.3.5/bin/
+   63  sh pycharm.sh 
+   64  cd ..
+   65  ls
+   66  rm -r pycharm-community-2023.3.5
+   67  sudo rm -r pycharm-community-2023.3.5
+   68  cd 
+   69  cd Downloads/
+   70  sudo tar xzf pycharm-community-2023.3.5-aarch64.tar.gz -C /opt/
+   71  cd /opt/pycharm-community-2023.3.5/bin/
+   72  sh pycharm.sh 
+   73  sudo ln -s /opt/pycharm/bin/pycharm.sh /usr/local/bin/pycharm
+   74  cd
+   75  pycharm
+   76  cd /usr/local/bin/
+   77  ls
+   78  rm pycharm 
+   79  sudo rm pycharm 
+   80  sudo ln -s /opt/pycharm-community-2023.3.5/bin/pycharm.sh /usr/local/bin/pycharm
+   81  ls
+   82  cd code/zed-sdk/
+   83  git status
+   84  subl .gitignore
+   85  nano .gitignore
+   86  git status
+   87  git add .
+   88  git commit -m "gitignore updated"
+   89  git config --global user.email "nobar.mahdi@gmail.com"
+   90  git config --global user.name "mahdinobar"
+   91  git push origin master 
+   92  git status
+   93  git add .
+   94  git commit -m "gitignore updated"
+   95  git push origin master 
+   96  pycharm 
+   97  pwd
+   98  cd .local/lib/python3.8/site-packages/
+   99  ls
+  100  htop
+  101  cd
+  102  cd code/zed-sdk/
+  103  git status
+  104  git add .
+  105  git commit -m "image and depth visualized"
+  106  conda env 
+  107  conda env list
+  108  python -m pip install cython numpy opencv-python pyopengl
+  109  python3 -m pip install cython
+  110  python3 -m pip install numpy
+  111  conda deactivate
+  112  python -m pip install cython numpy opencv-python pyopengl
+  113  pip install opencv-python
+  114  pip install opencv-python-aarch64
+  115  pip install opencv-python
+  116  pip install --reinstall  opencv-python
+  117  pip install -reinstall  opencv-python
+  118  pip install -reinstall opencv-python
+  119  pip install --reinstall opencv-python
+  120  pip3 install opencv-python
+  121  pip show opencv-python
+  122  pip install opencv-python
+  123  pip install display
+  124  pip install open3d
+  125  nvcc --version
+  126  cat /usr/local/cuda/version.txt
+  127  nvidia-smi
+  128  /usr/local/cuda/bin/nvcc --version
+  129  pip3 install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu118
+  130  pip install networkx==3.1
+  131  pip3 install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu118
+  132  pip install ultralytics
+  133  pip3 uninstall torch --index-url https://download.pytorch.org/whl/cu118
+  134  pip3 uninstall torch
+  135  pip3 install torchvision
+  136  pip3 install torch torchaudio --index-url https://download.pytorch.org/whl/cu118
+  137  cd ..
+  138  conda deactivate
+  139  cd zed-sdk/
+  140  git log
+  141  git log --raw
+  142  git status
+  143  subl .gitignore 
+  144  nano .gitignore 
+  145  git status
+  146  git add .
+  147  git commit -m "retrieve raw depth and image data"
+  148  pip install apriltag
+  149  pip uninstall apriltag
+  150  pip install dt-apriltags
+  151  ls
+  152  cd tutorials/
+  153  ls
+  154  mkdir log
+  155  cd log
+  156  pwd
+  157  cd ..
+  158  mkdir mahdi
+  159  cd mahdi/
+  160  ls
+  161  mkdir log
+  162  pwd
+  163  cd log/
+  164  pwd
+  165  cd ../..
+  166  git status
+  167  nano .gitignore 
+  168  git status
+  169  nano .gitignore 
+  170  git status
+  171  nano .gitignore 
+  172  git status
+  173  git add .
+  174  git commit -m "depth locations detected apriltags"
+  175  git push origin master 
+  176  ls
+  177  cd code/
+  178  ls
+  179  conda deactivate
+  180  git clone https://github.com/mahdinobar/apriltag.git
+  181  cd apriltag/
+  182  cmake -B build -DCMAKE_BUILD_TYPE=Release
+  183  sudo apt install cmake
+  184  cmake -B build -DCMAKE_BUILD_TYPE=Release
+  185  ls
+  186  git status
+  187  cmake --build build --target install
+  188  cd /usr/local/zed/tools/
+  189  ls
+  190  ZED Depth Viewer
+  191  ZED_Depth_Viewer 
+  192  sudo systemctl restart zed_x_daemon
+  193  ZED_Depth_Viewer 
+  194  sudo ZED_Depth_Viewer 
+  195  pycharm
+  196  cd
+  197  ls
+  198  cd /usr/local/zed/tools/
+  199  ls
+  200  ZED_Depth_Viewer 
+  201  ls
+  202  cd code/
+  203  ls
+  204  ls -l
+  205  cd zed-sdk/
+  206  ls
+  207  git status
+  208  git log
+  209  git status
+  210  git add .
+  211  git commit -m "detected relative depth printed, stable"
+  212  htop
+  213  cd code/apriltag/
+  214  git status
+  215  cd ..
+  216  cd zed-sdk/
+  217  git status
+  218  git add .
+  219  git commit -m "measurement of delta_position_ee_cube added"
+  220  git push origin master 
+  221  git checkout .
+  222  git add .
+  223  git commit -m "measurement of delta_position_ee_cube added, #2"
+  224  git push origin master 
+  225  pycharm 
+  226  htop
+  227  htop
+  228  pycharm 
+  229  cd /home/user/code/zed-sdk/mahdi/
+  230  git status
+  231  git add .
+  232  git commit "transformation matrix and cube pose retrieving, dev"
+  233  git add .
+  234  git commit "transformation matrix and cube pose retrieving, o_ee_c and T_c_ee, stable, #1"
+  235  ls
+  236  cd code/
+  237  ls
+  238  cd zed-sdk/
+  239  ls
+  240  conda env list
+  241  git status
+  242  git diff
+  243  q
+  244  git log
+  245  git status
+  246  git checkout .
+  247  git status
+  248  git add .
+  249  git commit -m "debugging"
+  250  pycharm 
+  251  cd
+  252  cd Downloads/
+  253  ls -l
+  254  chmod +x ZED_SDK_Tegra_L4T35.3_v4.1.1.zstd.run 
+  255  ./ZED_SDK_Tegra_L4T35.3_v4.1.1.zstd.run 
+  256  reboot 
+  257  cd
+  258  ls
+  259  sudo sh -c 'echo "deb http://packages.ros.org/ros/ubuntu $(lsb_release -sc) main" > /etc/apt/sources.list.d/ros-latest.list'
+  260  sudo apt install curl # if you haven't already installed curl
+  261  curl -s https://raw.githubusercontent.com/ros/rosdistro/master/ros.asc | sudo apt-key add -
+  262  sudo apt update
+  263  sudo apt install ros-noetic-desktop-full
+  264  source /opt/ros/noetic/setup.bash
+  265  echo "source /opt/ros/noetic/setup.bash" >> ~/.bashrc
+  266  source ~/.bashrc
+  267  sudo apt install python3-rosdep python3-rosinstall python3-rosinstall-generator python3-wstool build-essential
+  268  sudo apt install python3-rosdep
+  269  sudo rosdep init
+  270  rosdep update
+  271  cd ZE
+  272  ls
+  273  cd /home/user/code/zed-sdk/mahdi/
+  274  ls
+  275  cd /usr/local/zed/tools/
+  276  ls
+  277  ./ZED_Explorer 
+  278  sudo apt-cache show nvidia-jetpack | grep "Version"
+  279  nvcc --version
+  280  /usr/local/cuda/bin/nvcc --version
+  281  cd code/zed-sdk/
+  282  git status
+  283  git add .
+  284  git commit m "get transformation and target data, #0"
+  285  git status
+  286  git commit -m "get transformation and target data, #0"
+  287  git status
+  288  git push
+  289  git add .
+  290  git commit -m "get transformation and target data, #1"
+  291  conda deactivate
+  292  cd
+  293  cd miniconda3/
+  294  ls
+  295  cd include/
+  296  ls
+  297  rm /home/user/.local/lib/python3.8/site-packages/pyzed/sl.cpython-38-aarch64-linux-gnu.so
+  298  python3 -m pip show pyzed
+  299  cd code/zed-sdk/
+  300  cd
+  301  conda deactivate
+  302  python3 -m pip show pyzed
+  303  cd /home/user/.local/lib/python3.8/site-packages
+  304  ls
+  305  cd ..
+  306  ls
+  307  cd 
+  308  cd code/
+  309  cd apriltag/
+  310  ls
+  311  git status
+  312  git log
+  313  git remote -v
+  314  conda activate base
+  315  pip3 install dt-apriltags
+  316  cd
+  317  cd code/zed-sdk/
+  318  git status
+  319  git add .
+  320  git commit -m "get transformation and target data, #2"
+  321  cd
+  322  mkdir catkin_ws
+  323  cd catkin_ws/
+  324  mkdir src
+  325  cd src/
+  326  git clone https://github.com/mahdinobar/zed-ros-wrapper.git
+  327  cd ../
+  328  rosdep install --from-paths src --ignore-src -r -y
+  329  catkin_make -DCMAKE_BUILD_TYPE=Release
+  330  catkin build -DCMAKE_BUILD_TYPE=Release
+  331  ls
+  332  rm build
+  333  rm -r build
+  334  rm -r devel
+  335  catkin build -DCMAKE_BUILD_TYPE=Release
+  336  rosversion -d
+  337  which python
+  338  which python3
+  339  conda install -c conda-forge empy
+  340  pip3 install rosdep
+  341  which python3
+  342  catkin build -DPYTHON_EXECUTABLE=/home/user/miniconda3/bin/python3
+  343  cd catkin_ws/
+  344  ls
+  345  catkin build -DPYTHON_EXECUTABLE=/home/user/miniconda3/bin/python3
+  346  catkin build -DPYTHON_EXECUTABLE=/home/user/miniconda3/bin/python3 -DPYTHON_INCLUDE_DIR=/home/usr/miniconda3/include/python3.12
+  347  source ~/.bashrc
+  348  catkin build -DPYTHON_EXECUTABLE=/home/user/miniconda3/bin/python3 -DPYTHON_INCLUDE_DIR=/home/usr/miniconda3/include/python3.12
+  349  sudo sh -c 'echo "deb http://packages.ros.org/ros/ubuntu $(lsb_release -sc) main" > /etc/apt/sources.list.d/ros-latest.list'
+  350  sudo apt install curl # if you haven't already installed curl
+  351  curl -s https://raw.githubusercontent.com/ros/rosdistro/master/ros.asc | sudo apt-key add -
+  352  sudo apt update
+  353  sudo apt install ros-noetic-desktop-full
+  354  apt search ros-noetic
+  355  source /opt/ros/noetic/setup.bash
+  356  sudo apt install python3-rosdep python3-rosinstall python3-rosinstall-generator python3-wstool build-essential
+  357  sudo apt install python3-rosdep
+  358  sudo rosdep init
+  359  rosdep update
+  360  catkin_make
+  361  catkin_make -DCMAKE_BUILD_TYPE=Release
+  362  conda install anaconda-clean
+  363  anaconda-clean
+  364  cd 
+  365  rm -rf ~/miniconda3
+  366  vi ~/.bashrc
+  367  subl ~/.bashrc
+  368  text ~/.bashrc
+  369  nano ~/.bashrc
+  370  rm -rf ~/.anaconda_backup
+  371  conda deactivate
+  372  rm -rf ~/opt/anaconda3
+  373  rm -rf ~/anaconda3
+  374  rm -rf anaconda3
+  375  nano ~/.profile
+  376  nano ~/.bashrc
+  377  rqt_graph
+  378  pycharm 
+  379  sudo rm -R /usr/local/zed/
+  380  cd Downloads/
+  381  sudo apt install zstd
+  382  sudo apt install -reinstall zstd
+  383  sudo apt install --reinstall zstd
+  384  chmod +x ZED_SDK_Tegra_L4T35.3_v4.1.1.zstd.run 
+  385  .7ZED_SDK_Tegra_L4T35.3_v4.1.1.zstd.run 
+  386  ./ZED_SDK_Tegra_L4T35.3_v4.1.1.zstd.run 
+  387  cd cd ~/catkin_ws/src
+  388  cd 
+  389  cd catkin_ws/
+  390  ls
+  391  rm -r build/ devel/
+  392  ls
+  393  cd src/
+  394  ls
+  395  rm CMakeLists.txt 
+  396  ls
+  397  rm .*
+  398  rm *
+  399  cd ..
+  400  cd src/zed-ros-wrapper/
+  401  git remote -v
+  402  cd ../
+  403  rosdep install --from-paths src --ignore-src -r -y
+  404  catkin_make -DCMAKE_BUILD_TYPE=Release
+  405  ls
+  406  cd ..
+  407  rm -r catkin_ws
+  408  sudo rm -r catkin_ws
+  409  mkdir catkin_ws
+  410  cd catkin_ws/
+  411  mkdir src
+  412  ls
+  413  cd src/
+  414  git clone --recursive https://github.com/mahdinobar/zed-ros-wrapper.git
+  415  cd ..
+  416  rosdep install --from-paths src --ignore-src -r -y
+  417  catkin_make -DCMAKE_BUILD_TYPE=Release
+  418  source ./devel/setup.bash
+  419  roslaunch zed_wrapper zedxm.launch  
+  420  clion
+  421  subl ~/.bashrc 
+  422  cd Downloads/
+  423  sudo dpkg -i sublime-text_build-3211_amd64.deb 
+  424  arch
+  425  uname -m
+  426  dpkg --info sublime-text_build-3211_amd64.deb 
+  427  wget -qO - https://download.sublimetext.com/sublimehq-pub.gpg | gpg --dearmor | sudo tee /etc/apt/trusted.gpg.d/sublimehq-archive.gpg > /dev/null
+  428  echo "deb https://download.sublimetext.com/ apt/stable/" | sudo tee /etc/apt/sources.list.d/sublime-text.list
+  429  sudo apt-get update
+  430  sudo apt-get install apt-transport-https
+  431  sudo apt-get install sublime-text
+  432  subl 
+  433  cd catkin_ws/
+  434  ls
+  435  cd src/
+  436  ls
+  437  cd ..
+  438  roslaunch zed_wrapper zedxm.launch  
+  439  source ~/.bashrc
+  440  roslaunch zed_wrapper zedxm.launch  
+  441  source ./devel/setup.bash
+  442  roslaunch zed_wrapper zedxm.launch  
+  443  cd src/
+  444  git clone --recursive https://github.com/mahdinobar/zed-ros-interfaces.git
+  445  cd ..
+  446  rosdep install --from-paths src --ignore-src -r -y
+  447  cd src/
+  448  ls
+  449  rm -r zed-ros-interfaces
+  450  sudo rm -r zed-ros-interfaces
+  451  cd ca
+  452  cd code/
+  453  ls
+  454  cd zed-sdk/
+  455  git status
+  456  git add .
+  457  git commit -m "FINAL CAMERA OUTPUTS, offline, stable, #1"
+  458  rostopic list
+  459  rostopic echo /zedxm/zed_node/point_cloud/cloud_registered
+  460  cd
+  461  cd catkin_ws/
+  462  source ./devel/setup.bash
+  463  clear
+  464  rosrun zed_video_sub_tutorial zed_video_sub
+  465  roslaunch zed_display_rviz display_zedxm.launch
+  466  rosrun zed_video_sub_tutorial zed_video_sub
+  467  rosrun image_view disparity_view image:=disparity/disparity_image
+  468  cd src/
+  469  ls
+  470  cd zed-ros-wrapper/
+  471  subl .
+  472  cd ../zed-ros-examples/
+  473  subl .
+  474  cd ..
+  475  roslaunch zed_display_rviz display_zedxm.launch
+  476  rosrun zed_video_sub_tutorial zed_video_sub
+  477  rostopic list
+  478  rostopic info rgb/image_rect_gray
+  479  rostopic info /rgb/image_rect_gray
+  480  rostopic info /zedxm/zed_node/rgb/image_rect_gray
+  481  rostopic echo /zedxm/zed_node/rgb/image_rect_gray
+  482  rostopic bw /zedxm/zed_node/rgb/image_rect_gray
+  483  rostopic type /zedxm/zed_node/rgb/image_rect_gray
+  484  rostopic echo /zedxm/zed_node/rgb/image_rect_gray
+  485  subl bin/pycharm.sh
+  486  pycharm.desktop
+  487  cd ~/.local/share/applications
+  488  ls
+  489  ls -l
+  490  cd /usr/share/applications
+  491  ls
+  492  cd /opt/pycharm/bin
+  493  cd /opt/pycharm-community-2023.3.5/bin/
+  494  ls
+  495  sub pycharm.sh
+  496  subl pycharm.sh
+  497  pwd
+  498  bash -i -c "/opt/pycharm-community-2023.3.5/bin/pycharm.sh" %f
+  499  subl pycharm.sh
+  500  pycharm 
+  501  cd
+  502  cd catkin_ws/
+  503  roslaunch zed_wrapper zedxm.launch
+  504  source ./devel/setup.bash
+  505  roslaunch zed_wrapper zedxm.launch
+  506  cd src/
+  507  git clone --recursive https://github.com/mahdinobar/zed-ros-examples.git
+  508  cd ..
+  509  rosdep install --from-paths src --ignore-src -r -y
+  510  catkin_make -DCMAKE_BUILD_TYPE=Release
+  511  source ./devel/setup.bash
+  512  roslaunch zed_display_rviz display_zedxm.launch
+  513  roslaunch zed_wrapper zedxm.launch
+  514  bash -i -c "/opt/pycharm-community-2023.3.5/bin/pycharm.sh" %f
+  515  roslaunch zed_wrapper zedxm.launch
+  516  cd
+  517  python3 /home/user/code/zed-sdk/mahdi/measurement_ros_2.py
+  518  cd code/zed-sdk/
+  519  git status
+  520  git add .
+  521  git commit -m "simple subscriber to the grayscale image RO ZED wrapper"
+  522  git push origin master 
+  523  git add .
+  524  git commit -m "simple subscriber to the grayscale image RO ZED wrapper, #2"
+  525  rostopic list
+  526  ostopic type /zedxm/zed_node/point_cloud/cloud_registered
+  527  rostopic type /zedxm/zed_node/point_cloud/cloud_registered
+  528  pip3 install rosnumpy
+  529  pip install rosnumpy
+  530  git add .
+  531  git commit -m "simple subscriber to the grayscale image RO ZED wrapper, #3"
+  532  git add .
+  533  git commit -m "simple subscriber to the grayscale image RO ZED wrapper, #4"
+  534  git add .
+  535  git commit -m "time synchronous ROS subscription and output validation, #1"
+  536  git add .
+  537  git commit -m "time synchronous ROS subscription and output validation+publishing to my node, #2"
+  538  git add .
+  539  git commit -m "time synchronous ROS subscription and output validation+publishing to my node, #2"
+  540  git push origin master 
+  541  cd
+  542  cd catkin_ws/
+  543  source ./devel/setup.bash
+  544  roslaunch zed_wrapper zedxm.launch
+  545  clion
+  546  subl .bashrc 
+  547  /opt/clion/bin/clion.sh
+  548  pycharm 
+  549  cd /opt/pycharm-community-2023.3.5/bin/
+  550  subl pycharm.sh
+  551  pycharm 
+  552  htop
+  553  grep dhcp-server-identifier /var/lib/dhcp/dhclient.leases
+  554  ip r
+  555  subl /var/lib/dhcp3/dhclient.leases
+  556  sudo subl /etc/network/interfaces
+  557  rqt
+  558  rqt_plot 
+  559  rqt
+  560  rqt_graph
+  561  export ROS_MASTER_URI=http://192.168.1.33:11311
+  562  export ROS_HOSTNAME=192.168.1.33
+  563  ip a l
+  564  ip a
+  565  sudo lshw -class network
+  566  roscore
+  567  cd catkin_ws/
+  568  roslaunch zed_wrapper zedxm.launch
+  569  source ./devel/setup.bash
+  570  roslaunch zed_wrapper zedxm.launch
+  571  cd /etc/network
+  572  ls
+  573  hostname -I
+  574  hostnamectl status
+  575  sudo apt install --reinstall network-manager ubuntu-desktop
+  576  sudo netplan apply
+  577  nmcli device
+  578  hostname -I
+  579  hostname
+  580  ping GTW-ONX1-D1KH61OH
+  581  ssh GTW-ONX1-D1KH61OH
+  582  ping mahdi-X
+  583  ping mahdi-XPS-15-7590
+  584  ssh mahdi-XPS-15-7590
+  585  ping mahdi-XPS-15-7590
+  586  hostname
+  587  ping GTW-ONX1-D1KH61OH
+  588  netcat -l 1234
+  589  netcat -l 1239
+  590  netcat -l 1022
+  591  netcat -l 1025
+  592  nc -l 1025
+  593  nc -l 1234
+  594  nc -h
+  595  nc google.com 80
+  596  netcat google.com 80
+  597  ssh GTW-ONX1-D1KH61OH
+  598  cd
+  599  cd catkin_ws/
+  600  source ./devel/setup.bash
+  601  ssh GTW-ONX1-D1KH61OH
+  602  netcat -l 1234
+  603  ssh mahdi-XPS-15-7590
+  604  netcat mahdi-XPS-15-7590 1234
+  605  nc mahdi-XPS-15-7590 1234
+  606  netcat mahdi-XPS-15-7590 1234
+  607  netcat -l 1234
+  608  ping GTW-ONX1-D1KH61OH
+  609  ping mahdi-XPS-15-7590
+  610  hostname -I
+  611  subl /etc/hosts
+  612  subl
+  613  subl /etc/hosts
+  614  hostname -I
+  615  hostname
+  616  nmcli device
+  617  subl /etc/hosts
+  618  sudo subl /etc/network/interfaces
+  619  subl /etc/network/interfaces
+  620  subl /var/lib/dhcp3/dhclient.leases
+  621  ifconfig 
+  622  ping mahdi-XPS-15-7590
+  623  ping GTW-ONX1-D1KH61OH
+  624  ping mahdi-XPS-15-7590
+  625  ip a
+  626  ping 192.168.55.1
+  627  nano /etc/network
+  628  netcat -l 1234
+  629  ping 192.168.55.1
+  630  ping mahdi-XPS-15-7590
+  631  netcat mahdi-XPS-15-7590 1234
+  632  netcat -l 1234
+  633  ifconfig 
+  634  ping mahdi-XPS-15-7590
+  635  ping 192.168.1.33
+  636  ping 10.10.10.1
+  637  ssh GTW-ONX1-D1KH61OH
+  638  ping GTW-ONX1-D1KH61OH
+  639  ping mahdi-XPS-15-7590
+  640  ping 192.168.1.33
+  641  ping 168.52.44.1
+  642  ifconfig 
+  643  ping 192.168.1.33
+  644  ssh mahdi-XPS-15-7590@192.168.1.33
+  645  nmap 192.168.1.33
+  646  whereis nmap
+  647  sudo apt-get install nmap
+  648  whereis nmap
+  649  nmap 192.168.1.33
+  650  nmap localhost
+  651  cd
+  652  cd .ssh/
+  653  ls
+  654  ls -al
+  655  sudo apt install openssh-client
+  656  ls -al
+  657  ssh-keygen -t rsa -b 4096
+  658  ls
+  659  ssh-copy-id mahdi-XPS-15-7590@192.168.1.33
+  660  sudo /etc/init.d/ssh restart
+  661  ssh-copy-id mahdi-XPS-15-7590@192.168.1.33
+  662  sudo ssh-copy-id mahdi-XPS-15-7590@192.168.1.33
+  663  ssh-copy-id mahdi-XPS-15-7590@192.168.1.33
+  664  ls
+  665  subl known_hosts 
+  666  ls -al
+  667  sudo chmod 600 known_hosts 
+  668  ls -al
+  669  sudo /etc/init.d/ssh restart
+  670  sudo /etc/init.d/ssh status
+  671  ssh-copy-id mahdi-XPS-15-7590@192.168.1.33
+  672  ssh mahdi-XPS-15-7590@192.168.1.33
+  673  sudo /etc/init.d/ssh restart
+  674  ssh-copy-id mahdi-XPS-15-7590@192.168.1.33
+  675  sudo /etc/init.d/ssh restart
+  676  ssh-copy-id mahdi-XPS-15-7590@192.168.1.33
+  677  sudo apt update
+  678  sudo apt install --reinstall openssh-server
+  679  ssh 192.168.1.33
+  680  cd
+  681  ifconfig 
+  682  subl /etc/ssh/sshd_config
+  683  cd .ssh/
+  684  ls
+  685  subl known_hosts 
+  686  ls -al
+  687  rm id_rsa
+  688  rm id_rsa.pub 
+  689  ls
+  690  rm known_hosts 
+  691  ls
+  692  subl id_rsa.pub 
+  693  subl known_hosts 
+  694  subl id_rsa 
+  695  subl id_rsa.pub 
+  696  pycharm 
+  697  cd
+  698  pwd
+  699  sudo service ssh status
+  700  passwd admin
+  701  passwd user
+  702  ssh-copy-id mahdi-XPS-15-7590@192.168.1.33
+  703  cd ssh
+  704  cd /etc/ssh
+  705  subl sshd_config
+  706  sudo service ssh restart
+  707  ssh-copy-id mahdi-XPS-15-7590@192.168.1.33
+  708  ssh mahdi-XPS-15-7590@192.168.1.33
+  709  ssh -v mahdi-XPS-15-7590@192.168.1.33
+  710  subl ssh_config
+  711  cd ..
+  712  sudo apt purge openssh-client
+  713  sudo apt purge openssh-server 
+  714  sudo apt install openssh-server 
+  715  sudo apt purge openssh-server 
+  716  cd ssh
+  717  ls
+  718  ls -la
+  719  sudo apt install openssh-server 
+  720  cd ssh
+  721  ls
+  722  ls -la
+  723  subl ssh_config
+  724  nmap192.168.1.33
+  725  nmap 192.168.1.33
+  726  ls
+  727  subl ssh_host_rsa_key.pub 
+  728  subl sshd_config
+  729  sudo systemctl restart sshd
+  730  subl sshd_config
+  731  sudo systemctl restart sshd
+  732  subl sshd_config
+  733  sudo systemctl restart sshd
+  734  whoami
+  735  ssh -v mahdi-XPS-15-7590@192.168.1.33
+  736  ssh-copy-id mahdi-XPS-15-7590@192.168.1.33
+  737  ssh-copy-id mahdi-XPS-15-7590@168.52.44.1
+  738  ssh-copy-id mahdi-XPS-15-7590.local@168.52.44.1
+  739  ssh-copy-id -vvv mahdi-XPS-15-7590@168.52.44.1
+  740  ssh-copy-id mahdi-XPS-15-7590@168.52.44.1
+  741  ping mahdi-XPS-15-7590@168.52.44.1
+  742  ping 168.52.44.1
+  743  ping 192.168.1.33
+  744  rm -r .ssh
+  745  cd .ssh
+  746  mkdir .ssh
+  747  cd .ssh
+  748  ls
+  749  ls -ld
+  750  cd ..
+  751  chmod 0700 /home/user/.ssh
+  752  cd .ss
+  753  cd .ssh/
+  754  ls -ld
+  755  subl authorized_keys
+  756  ls -la
+  757  chmod 0600 authorized_keys 
+  758  ls -la
+  759  ssh-keygen -t rsa -b 4096
+  760  passwd user
+  761  d
+  762  ifconfig 
+  763  ssh-copy-id mahdi-XPS-15-7590@192.168.1.33
+  764  cd /etc/ssh/
+  765  ls -al
+  766  ls
+  767  subl ssh_host_rsa_key
+  768  subl ssh_host_rsa_key.pub 
+  769  cd ..
+  770  rm ssh
+  771  sudo apt-get purge openssh-server
+  772  sudo apt-get purge openssh-client 
+  773  sudo apt-get purge openssh-server
+  774  sudo apt-get install --reinstall openssh-server
+  775  cd ssh/
+  776  ls
+  777  ls -al
+  778  ls
+  779  ls -al
+  780  ssh-copy-id mahdi-XPS-15-7590@192.168.1.33
+  781  ssh-keygen -t rsa -b 4096
+  782  ssh-copy-id mahdi-XPS-15-7590@192.168.1.33
+  783  ls
+  784  subl ssh_config
+  785  sudo service ssh restart 
+  786  ssh-copy-id mahdi-XPS-15-7590@192.168.1.33
+  787  ssh-copy-id mahdi-XPS-15-7590.local@192.168.1.33
+  788  sudo systemctl restart ssh
+  789  ssh-copy-id mahdi-XPS-15-7590.local@192.168.1.33
+  790  ssh-copy-id mahdi-XPS-15-7590@192.168.1.33
+  791  sudo su
+  792  ssh-copy-id -o PreferredAuthentications=password mahdi-XPS-15-7590@192.168.1.33
+  793  subl ssh_config
+  794  ssh-copy-id -o PreferredAuthentications=password mahdi-XPS-15-7590@192.168.1.33
+  795  subl sshd_config
+  796  ssh-copy-id -o PreferredAuthentications=password mahdi-XPS-15-7590@192.168.1.33
+  797  sudo systemctl restart ssh
+  798  sudo service ssh restart 
+  799  ssh-copy-id -o PreferredAuthentications=password mahdi-XPS-15-7590@192.168.1.33
+  800  ssh-copy-id mahdi-XPS-15-7590@192.168.1.33
+  801  sudo service ssh restart 
+  802  ssh-copy-id mahdi-XPS-15-7590@192.168.1.33
+  803  ssh-copy-id mahdi-XPS-15-7590.local@192.168.1.33
+  804  subl sshd_config
+  805  sudo service ssh restart 
+  806  ssh-copy-id mahdi-XPS-15-7590.local@192.168.1.33
+  807  subl sshd_config
+  808  subl ssh_config
+  809  sudo systemctl restart ssh
+  810  sudo service ssh restart 
+  811  ssh-copy-id mahdi-XPS-15-7590.local@192.168.1.33
+  812  id ubuntu
+  813  ssh-copy-id -v mahdi-XPS-15-7590.local@192.168.1.33
+  814  ssh -v mahdi-XPS-15-7590.local@192.168.1.33
+  815  subl ssh_host_rsa_key.pub 
+  816  sudo service ssh restart 
+  817  ssh -v mahdi-XPS-15-7590.local@192.168.1.33
+  818  ssh -v mahdi-XPS-15-7590@192.168.1.33
+  819  sudo service ssh restart 
+  820  ssh -v mahdi-XPS-15-7590@192.168.1.33
+  821  ping 10.20.40.1
+  822  sudo netplan apply
+  823  sudo apt install --reinstall network-manager ubuntu-desktop
+  824  ping 10.20.40.1
+  825  cd /etc/
+  826  cd network
+  827  ls
+  828  cd if-up.d/
+  829  ls
+  830  cd ..
+  831  ls
+  832  ping 10.20.40.1
+  833  ping 10.20.30.1
+  834  ifconfig 
+  835  ping 169.254.124.168
+  836  ping 169.254.254.235
+  837  ifconfig 
+  838  whoami
+  839  ssh mahdi@169.254.254.235
+  840  roscore
+  841  cd catkin_ws/
+  842  source ./devel/setup.bash
+  843  roslaunch zed_wrapper zedxm.launch
+  844  roscore
+  845  roslaunch zed_wrapper zedxm.launch
+  846  ping 169.254.254.235
+  847  netcat -l 1234
+  848  nc -l 1234
+  849  netcat mahdi@169.254.254.235 1234
+  850  netcat mahdi 1234
+  851  netcat 169.254.254.235 1234
+  852  nc 169.254.254.235 1234
+  853  netcat mahdi@169.254.254.235 1234
+  854  netcat 169.254.254.235 1234
+  855  nc 169.254.254.235 1234
+  856  netcat mahdi@169.254.254.235 1234
+  857  netcat 169.254.254.235 1234
+  858  netcat mahdi@169.254.254.235 1234
+  859  netcat 169.254.254.235 1234
+  860  roslaunch zed_wrapper zedxm.launch
+  861  export ROS_MASTER_URI=http://mahdi@169.254.254.235:11311
+  862  roscore 
+  863  export ROS_MASTER_URI=http://localhost:11311
+  864  roscore 
+  865  export ROS_MASTER_URI=http://mahdi@169.254.254.235:11311
+  866  python3 ~/code/zed-sdk/mahdi/test.py 
+  867  histpry >ROS_connection_cameraside.txt
+  868  history >ROS_connection_cameraside.txt

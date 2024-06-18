@@ -1,4 +1,8 @@
 /home/user/code/zed-sdk/mahdi/log/
+
+mahdi/*.pnm
+mahdi/*.ps
+
 *.pt
 .idea
 ### C ###
