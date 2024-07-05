@@ -74,7 +74,7 @@ class Server:
         self.fx = 377.4441223144531
         self.fy = 377.4441223144531
 
-        self.debug = 1
+        self.debug = 0
 
         # self.pub_p_obj_ca = rospy.Publisher('p_obj_ca', Vector3, queue_size=10)
         # self.pub_T_ca_ftc2 = rospy.Publisher('T_ca_ftc2', Float64MultiArray, queue_size=10)
@@ -227,7 +227,7 @@ if __name__ == '__main__':
 
         pub_p_obj_ca.publish(server.p_obj_ca)
         pub_T_ca_ftc2.publish(server.T_ca_ftc2)
-        if 0:
+        if server.debug:
             info = "p_obj_ca.x={}".format(server.p_obj_ca.x)
             rospy.loginfo(info)
             info = "p_obj_ca.y={}".format(server.p_obj_ca.y)
