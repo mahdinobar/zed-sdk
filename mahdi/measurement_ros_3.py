@@ -227,7 +227,7 @@ if __name__ == '__main__':
 
         pub_p_obj_ca.publish(server.p_obj_ca)
         pub_T_ca_ftc2.publish(server.T_ca_ftc2)
-        if server.debug:
+        if 0:
             info = "p_obj_ca.x={}".format(server.p_obj_ca.x)
             rospy.loginfo(info)
             info = "p_obj_ca.y={}".format(server.p_obj_ca.y)
