@@ -369,15 +369,27 @@ class Server:
                     print("p_obj_ca = {} [m].".format(p_obj_ca))
         if self.debug:
             self.cv2_imshow(color_image_copy, window_name="left image")
-            cv2.imwrite("/home/user/code/zed-sdk/mahdi/log/image_left.jpeg", color_image_copy)
             self.cv2_imshow(depth_image_copy, window_name="depth image")
-            print("=============================")
+            # save 10 data for calibration
+            # cv2.imwrite("/home/user/code/zed-sdk/mahdi/log/debug_calibration/left_image_10.jpeg", color_image_copy)
+            # np.save("/home/user/code/zed-sdk/mahdi/log/debug_calibration/left_image_10.npy", color_image_copy)
+            # cv2.imwrite("/home/user/code/zed-sdk/mahdi/log/debug_calibration/depth_map_10.jpeg", depth_image_copy)
+            # np.save("/home/user/code/zed-sdk/mahdi/log/debug_calibration/depth_map_10.npy", depth_image_copy)
+            # D0 = list(sensor_msgs.point_cloud2.read_points(point_cloud))
+            # D = np.asarray(D0).reshape(540,960,4)
+            # np.save("/home/user/code/zed-sdk/mahdi/log/debug_calibration/point_cloud_10.npy", D)
+            # np.save("/home/user/code/zed-sdk/mahdi/log/debug_calibration/2Ddetections_10.npy", tag.corners)
+            # print("=============================")
+            # O_T_EE = np.array([[-0.949328,  -0.312601, -0.0322253,   0.338836],
+            #               [ -0.310152 ,  0.948508, -0.0641866 , -0.171729],
+            #               [ 0.0506308, -0.0509394,  -0.997417 ,  0.230203],
+            #               [0, 0, 0, 1]])
+            # np.save("/home/user/code/zed-sdk/mahdi/log/debug_calibration/O_T_EE_10.npy", O_T_EE)
 
         # self.pub_p_obj_ca.publish(self.p_obj_ca)
         # self.pub_T_ca_ftc2.publish(self.T_ca_ftc2)
         # info = "p_obj_ca.x={}".format(self.p_obj_ca.x)
         # rospy.loginfo(info)
-
 
 if __name__ == '__main__':
 

@@ -243,6 +243,7 @@ class Server:
         if self.debug:
             self.cv2_imshow(color_image_copy, window_name="left image")
             self.cv2_imshow(depth_image_copy, window_name="depth image")
+
             print("=============================")
 
         # self.pub_p_obj_ca.publish(self.p_obj_ca)
