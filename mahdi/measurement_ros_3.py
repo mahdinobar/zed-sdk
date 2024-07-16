@@ -36,7 +36,7 @@ class Server:
                                     refine_edges=1,
                                     decode_sharpening=0.25,
                                     debug=0)
-        self.T_ca_ftc2 = Float64MultiArray()
+        self.T_ftc_ca = Float64MultiArray()
         self.p_obj_ca = Vector3()
         # self.cx = 479.4909973144531
         # self.cy = 299.3664855957031
@@ -67,7 +67,6 @@ class Server:
         # self.fx = 377.4441223144531
         # self.fy = 377.4441223144531
 
-
         # _f from /zedxm/zed_node/depth/camera_info
         self.cx = 487.22515869140625
         self.cy = 258.14642333984375
@@ -77,7 +76,7 @@ class Server:
         self.debug = 1
 
         # self.pub_p_obj_ca = rospy.Publisher('p_obj_ca', Vector3, queue_size=10)
-        # self.pub_T_ca_ftc2 = rospy.Publisher('T_ca_ftc2', Float64MultiArray, queue_size=10)
+        # self.pub_T_ftc_ca = rospy.Publisher('T_ftc_ca', Float64MultiArray, queue_size=10)
         # self.p_obj_ca.x = 0
         # self.p_obj_ca.y = 0
         # self.p_obj_ca.z = 0
@@ -115,9 +114,9 @@ class Server:
         color_image = self.bridge.imgmsg_to_cv2(color_image, desired_encoding='passthrough')
         if self.debug:
             print("color_image=\n", color_image)
-        color_image_copy = color_image.copy()
-        cv2.imwrite("/home/user/code/zed-sdk/mahdi/log/image_left_1.jpeg", color_image_copy)
-        # depth_image = self.bridge.imgmsg_to_cv2(depth_image, desired_encoding='passthrough')
+            color_image_copy = color_image.copy()
+            cv2.imwrite("/home/user/code/zed-sdk/mahdi/log/image_left_1.jpeg", color_image_copy)
+            # depth_image = self.bridge.imgmsg_to_cv2(depth_image, desired_encoding='passthrough')
         depth_image = np.array(self.bridge.imgmsg_to_cv2(depth_image, desired_encoding='passthrough'), dtype=np.float32)
         depth_image_copy = depth_image.copy()
 
@@ -159,237 +158,260 @@ class Server:
                                 fontFace=cv2.FONT_HERSHEY_SIMPLEX,
                                 fontScale=0.5,
                                 color=(255, 0, 0))
-            x_t_ftc2_img, y_t_ftc2_img = (tag.corners[0] + tag.corners[3]) / 2
-            u = int(x_t_ftc2_img)
-            v = int(y_t_ftc2_img)
-            us = np.linspace(u - 2, u + 2, 5, dtype=int)
-            vs = np.linspace(v - 2, v + 2, 5, dtype=int)
-            uvs = np.array(np.meshgrid(us, vs)).reshape(2, 25).transpose().tolist()
-            D0 = list(sensor_msgs.point_cloud2.read_points(point_cloud, uvs=uvs))
-            D = np.nanmean(np.asarray(D0), 0)
-            X = D[0]
-            Y = D[1]
-            Z = D[2]
-            check_idx_tag = np.array([X, Y, Z])
-            # if check_idx_tag[0]<0.18:
-            #     tag_idx = 0
-            # else:
-            #     tag_idx =1
-            tag_idx=0 #TODO
+            # x_t_ftc2_img, y_t_ftc2_img = (tag.corners[0] + tag.corners[3]) / 2
+            # u = int(x_t_ftc2_img)
+            # v = int(y_t_ftc2_img)
+            # us = np.linspace(u - 2, u + 2, 5, dtype=int)
+            # vs = np.linspace(v - 2, v + 2, 5, dtype=int)
+            # uvs = np.array(np.meshgrid(us, vs)).reshape(2, 25).transpose().tolist()
+            # D0 = list(sensor_msgs.point_cloud2.read_points(point_cloud, uvs=uvs))
+            # D = np.nanmean(np.asarray(D0), 0)
+            # X = D[0]
+            # Y = D[1]
+            # Z = D[2]
+            # check_idx_tag = np.array([X, Y, Z])
+            # # if check_idx_tag[0]<0.18:
+            # #     tag_idx = 0
+            # # else:
+            # #     tag_idx =1
+            tag_idx = 0  # TODO
             if self.debug:
                 cv2.putText(color_image_copy, str(tag_idx),
                             org=(tag.corners[0, 0].astype(int) - 5, tag.corners[0, 1].astype(int) - 5),
                             fontFace=cv2.FONT_HERSHEY_SIMPLEX,
                             fontScale=1.5,
                             color=(200, 0, 200))
-            if tag_idx == 0:  # TODO make this and else conditions robust to order of tags
-                x_t_ftc2_img, y_t_ftc2_img = (tag.corners[0] + tag.corners[3]) / 2
-                # arrayPosition = y_t_ftc2_img * point_cloud.row_step + x_t_ftc2_img * point_cloud.point_step
-                # arrayPosX = arrayPosition + point_cloud.fields[0].offset
-                # arrayPosY = arrayPosition + point_cloud.fields[1].offset
-                # arrayPosZ = arrayPosition + point_cloud.fields[2].offset
-                # X = point_cloud.data[int(arrayPosX)]
-                # Y = point_cloud.data[int(arrayPosY)]
-                # Z = point_cloud.data[int(arrayPosZ)]
-                # # TODO check u and v
-                # v = x_t_ftc2_img
-                # u = y_t_ftc2_img
-                # depth_tmp = depth_image_copy[int(u) - 3:int(u) + 3, int(v) - 3:int(v) + 3]
-                # # TODO 0.250 [m] prior magic number
-                # acceptable_idx = depth_tmp < 0.250
-                # Z = np.mean(depth_tmp[acceptable_idx])
-                # X = Z * (u - self.cx) / self.fx
-                # Y = Z * (v - self.cy) / self.fy
-                u = int(x_t_ftc2_img)
-                v = int(y_t_ftc2_img)
-                us = np.linspace(u - 2, u + 2, 5, dtype=int)
-                vs = np.linspace(v - 2, v + 2, 5, dtype=int)
-                uvs= np.array(np.meshgrid(us, vs)).reshape(2, 25).transpose().tolist()
-                D0 = list(sensor_msgs.point_cloud2.read_points(point_cloud, uvs=uvs))
-                D = np.nanmean(np.asarray(D0), 0)
-                X = D[0]
-                Y = D[1]
-                Z = D[2]
-                t_ftc2_ca = np.array([X, Y, Z])
-                if self.debug:
-                    print("t_ftc2_ca = {} [m].".format(t_ftc2_ca))
-                x_y_ftc2_img, y_y_ftc2_img = tag.corners[3]
-                print("----------",tag.corners)
-                # arrayPosition = y_y_ftc2_img * point_cloud.row_step + x_y_ftc2_img * point_cloud.point_step
-                # arrayPosX = arrayPosition + point_cloud.fields[0].offset
-                # arrayPosY = arrayPosition + point_cloud.fields[1].offset
-                # arrayPosZ = arrayPosition + point_cloud.fields[2].offset
-                # X1 = point_cloud.data[int(arrayPosX)]
-                # Y1 = point_cloud.data[int(arrayPosY)]
-                # Z1 = point_cloud.data[int(arrayPosZ)]
-                # for point in sensor_msgs.point_cloud2.read_points(point_cloud, skip_nans=True):
-                #     pt_x = point[0]
-                #     pt_y = point[1]
-                #     pt_z = point[2]
-                # for point in sensor_msgs.point_cloud2.read_points(point_cloud, skip_nans=True,
-                #                                                   uvs=[int(x_y_ftc2_img), int(y_y_ftc2_img)]):
-                #     pt_x = point[0]
-                #     pt_y = point[1]
-                #     pt_z = point[2]
-                dpix=0
-                # # # TODO check u and v
-                # u = int(x_y_ftc2_img)
-                # v = int(y_y_ftc2_img)
-                # depth_tmp = depth_image_copy[v,u]
-                # # TODO 0.250 [m] prior magic number
-                # acceptable_idx = depth_tmp < 0.550
-                # # Z=depth_image_copy[int(u),int(v)]
-                # Z0 = np.mean(depth_tmp[acceptable_idx])
-                # Z0=depth_image_copy
-                # X0=np.zeros(np.shape(Z0))
-                # Y0=np.zeros(np.shape(Z0))
-                # for u in range(0,959):
-                #     for v in range(0,539):
-                #         X0[v,u]=Z0[v,u]* (u - self.cx) / self.fx
-                #         Y0[v,u]=Z0[v,u]* (v - self.cy) / self.fy
-                # D0 = list(sensor_msgs.point_cloud2.read_points(point_cloud))
-                # D = np.asarray(D0).reshape(540,960,4)
-                # X = D[:,:,0]
-                # Y = D[:,:,1]
-                # Z = D[:,:,2]
-                # np.save("/home/user/code/zed-sdk/mahdi/log/X0_f.npy", X0)
-                # np.save("/home/user/code/zed-sdk/mahdi/log/Y0_f.npy", Y0)
-                # np.save("/home/user/code/zed-sdk/mahdi/log/Z0_f.npy", Z0)
-                # np.save("/home/user/code/zed-sdk/mahdi/log/X_f.npy", X)
-                # np.save("/home/user/code/zed-sdk/mahdi/log/Y_f.npy", Y)
-                # np.save("/home/user/code/zed-sdk/mahdi/log/Z_f.npy", Z)
+            # if tag_idx == 0:  # TODO make this and else conditions robust to order of tags
+            #     x_t_ftc2_img, y_t_ftc2_img = (tag.corners[0] + tag.corners[3]) / 2
+            #     # arrayPosition = y_t_ftc2_img * point_cloud.row_step + x_t_ftc2_img * point_cloud.point_step
+            #     # arrayPosX = arrayPosition + point_cloud.fields[0].offset
+            #     # arrayPosY = arrayPosition + point_cloud.fields[1].offset
+            #     # arrayPosZ = arrayPosition + point_cloud.fields[2].offset
+            #     # X = point_cloud.data[int(arrayPosX)]
+            #     # Y = point_cloud.data[int(arrayPosY)]
+            #     # Z = point_cloud.data[int(arrayPosZ)]
+            #     # # TODO check u and v
+            #     # v = x_t_ftc2_img
+            #     # u = y_t_ftc2_img
+            #     # depth_tmp = depth_image_copy[int(u) - 3:int(u) + 3, int(v) - 3:int(v) + 3]
+            #     # # TODO 0.250 [m] prior magic number
+            #     # acceptable_idx = depth_tmp < 0.250
+            #     # Z = np.mean(depth_tmp[acceptable_idx])
+            #     # X = Z * (u - self.cx) / self.fx
+            #     # Y = Z * (v - self.cy) / self.fy
+            #     u = int(x_t_ftc2_img)
+            #     v = int(y_t_ftc2_img)
+            #     us = np.linspace(u - 2, u + 2, 5, dtype=int)
+            #     vs = np.linspace(v - 2, v + 2, 5, dtype=int)
+            #     uvs= np.array(np.meshgrid(us, vs)).reshape(2, 25).transpose().tolist()
+            #     D0 = list(sensor_msgs.point_cloud2.read_points(point_cloud, uvs=uvs))
+            #     D = np.nanmean(np.asarray(D0), 0)
+            #     X = D[0]
+            #     Y = D[1]
+            #     Z = D[2]
+            #     t_ftc2_ca = np.array([X, Y, Z])
+            #     if self.debug:
+            #         print("t_ftc2_ca = {} [m].".format(t_ftc2_ca))
+            #     x_y_ftc2_img, y_y_ftc2_img = tag.corners[3]
+            #     print("----------",tag.corners)
+            #     # arrayPosition = y_y_ftc2_img * point_cloud.row_step + x_y_ftc2_img * point_cloud.point_step
+            #     # arrayPosX = arrayPosition + point_cloud.fields[0].offset
+            #     # arrayPosY = arrayPosition + point_cloud.fields[1].offset
+            #     # arrayPosZ = arrayPosition + point_cloud.fields[2].offset
+            #     # X1 = point_cloud.data[int(arrayPosX)]
+            #     # Y1 = point_cloud.data[int(arrayPosY)]
+            #     # Z1 = point_cloud.data[int(arrayPosZ)]
+            #     # for point in sensor_msgs.point_cloud2.read_points(point_cloud, skip_nans=True):
+            #     #     pt_x = point[0]
+            #     #     pt_y = point[1]
+            #     #     pt_z = point[2]
+            #     # for point in sensor_msgs.point_cloud2.read_points(point_cloud, skip_nans=True,
+            #     #                                                   uvs=[int(x_y_ftc2_img), int(y_y_ftc2_img)]):
+            #     #     pt_x = point[0]
+            #     #     pt_y = point[1]
+            #     #     pt_z = point[2]
+            #     dpix=0
+            #     # # # TODO check u and v
+            #     # u = int(x_y_ftc2_img)
+            #     # v = int(y_y_ftc2_img)
+            #     # depth_tmp = depth_image_copy[v,u]
+            #     # # TODO 0.250 [m] prior magic number
+            #     # acceptable_idx = depth_tmp < 0.550
+            #     # # Z=depth_image_copy[int(u),int(v)]
+            #     # Z0 = np.mean(depth_tmp[acceptable_idx])
+            #     # Z0=depth_image_copy
+            #     # X0=np.zeros(np.shape(Z0))
+            #     # Y0=np.zeros(np.shape(Z0))
+            #     # for u in range(0,959):
+            #     #     for v in range(0,539):
+            #     #         X0[v,u]=Z0[v,u]* (u - self.cx) / self.fx
+            #     #         Y0[v,u]=Z0[v,u]* (v - self.cy) / self.fy
+            #     # D0 = list(sensor_msgs.point_cloud2.read_points(point_cloud))
+            #     # D = np.asarray(D0).reshape(540,960,4)
+            #     # X = D[:,:,0]
+            #     # Y = D[:,:,1]
+            #     # Z = D[:,:,2]
+            #     # np.save("/home/user/code/zed-sdk/mahdi/log/X0_f.npy", X0)
+            #     # np.save("/home/user/code/zed-sdk/mahdi/log/Y0_f.npy", Y0)
+            #     # np.save("/home/user/code/zed-sdk/mahdi/log/Z0_f.npy", Z0)
+            #     # np.save("/home/user/code/zed-sdk/mahdi/log/X_f.npy", X)
+            #     # np.save("/home/user/code/zed-sdk/mahdi/log/Y_f.npy", Y)
+            #     # np.save("/home/user/code/zed-sdk/mahdi/log/Z_f.npy", Z)
+            #
+            #     # X0 = Z0 * (u - self.cx) / self.fx
+            #     # Y0 = Z0 * (v - self.cy) / self.fy
+            #
+            #     u = int(x_y_ftc2_img)
+            #     v = int(y_y_ftc2_img)
+            #     us = np.linspace(u - dpix, u + dpix, 2*dpix+1, dtype=int)
+            #     vs = np.linspace(v - dpix, v + dpix, 2*dpix+1, dtype=int)
+            #     uvs= np.array(np.meshgrid(us, vs)).reshape(2, (2*dpix+1)**2).transpose().tolist()
+            #     D0 = list(sensor_msgs.point_cloud2.read_points(point_cloud, uvs=uvs))
+            #     D = np.nanmean(np.asarray(D0), 0)
+            #     X = D[0]
+            #     Y = D[1]
+            #     Z = D[2]
+            #     y_ftc2_ca = np.array([X, Y, Z])
+            #
+            #     if self.debug:
+            #         print("y_ftc2_ca = {} [m].".format(y_ftc2_ca))
+            #     x_c_tag_img, y_c_tag_img = np.mean(tag.corners, 0)
+            #     # arrayPosition = y_c_tag_img * point_cloud.row_step + x_c_tag_img * point_cloud.point_step
+            #     # arrayPosX = arrayPosition + point_cloud.fields[0].offset
+            #     # arrayPosY = arrayPosition + point_cloud.fields[1].offset
+            #     # arrayPosZ = arrayPosition + point_cloud.fields[2].offset
+            #     # X = point_cloud.data[int(arrayPosX)]
+            #     # Y = point_cloud.data[int(arrayPosY)]
+            #     # Z = point_cloud.data[int(arrayPosZ)]
+            #     # # TODO check u and v
+            #     # v = x_c_tag_img
+            #     # u = y_c_tag_img
+            #     # depth_tmp = depth_image_copy[int(u) - 3:int(u) + 3, int(v) - 3:int(v) + 3]
+            #     # # TODO 0.250 [m] prior magic number
+            #     # acceptable_idx = depth_tmp < 0.250
+            #     # Z = np.mean(depth_tmp[acceptable_idx])
+            #     # X = Z * (u - self.cx) / self.fx
+            #     # Y = Z * (v - self.cy) / self.fy
+            #     u = int(x_c_tag_img)
+            #     v = int(y_c_tag_img)
+            #     us = np.linspace(u - 2, u + 2, 5, dtype=int)
+            #     vs = np.linspace(v - 2, v + 2, 5, dtype=int)
+            #     uvs= np.array(np.meshgrid(us, vs)).reshape(2, 25).transpose().tolist()
+            #     D0 = list(sensor_msgs.point_cloud2.read_points(point_cloud, uvs=uvs))
+            #     D = np.nanmean(np.asarray(D0), 0)
+            #     X = D[0]
+            #     Y = D[1]
+            #     Z = D[2]
+            #     c_tag_ca = np.array([X, Y, Z])
+            #     if self.debug:
+            #         # print("y_c_tag_img = {} [m].".format(y_c_tag_img))
+            #         print("c_tag_ca = {} [m].".format(c_tag_ca))
+            #     # cx=479.491
+            #     # cy=299.366
+            #     # fx=367.726
+            #     # fy=367.623
+            #     # # TODO check u and v
+            #     # v=x_c_tag_img
+            #     # u=y_c_tag_img
+            #     # depth_image = self.bridge.imgmsg_to_cv2(depth_image, desired_encoding='passthrough')
+            #     # z=depth_image[int(u),int(v)]
+            #     # x=depth_image[int(u),int(v)]*(u-self.cx/self.fx)
+            #     # y=depth_image[int(u),int(v)]*(v-self.cy/self.fy)
+            #     # print("(x,y,z)=",x,y,z)
+            #     z_ftc2_ca = t_ftc2_ca + (t_ftc2_ca - c_tag_ca)
+            #     x_ftc2_ca = np.cross(y_ftc2_ca, z_ftc2_ca)
+            #     if self.debug:
+            #         print("x_ftc2_ca_atFTC2 = {} [m].".format((x_ftc2_ca-t_ftc2_ca)/ np.linalg.norm(x_ftc2_ca - t_ftc2_ca)))
+            #         print("y_ftc2_ca_atFTC2 = {} [m].".format((y_ftc2_ca-t_ftc2_ca)/ np.linalg.norm(y_ftc2_ca - t_ftc2_ca)))
+            #         print("z_ftc2_ca_atFTC2 = {} [m].".format((z_ftc2_ca-t_ftc2_ca)/ np.linalg.norm(z_ftc2_ca - t_ftc2_ca)))
+            #         print("t_ftc2_ca = {} [m].".format(t_ftc2_ca))
+            #
+            #     # R = np.vstack(((x_ftc2_ca - t_ftc2_ca) / np.linalg.norm((x_ftc2_ca - t_ftc2_ca)),
+            #     #                (y_ftc2_ca - t_ftc2_ca) / np.linalg.norm((y_ftc2_ca - t_ftc2_ca)),
+            #     #                (z_ftc2_ca - t_ftc2_ca) / np.linalg.norm((z_ftc2_ca - t_ftc2_ca)))).T
+            R_cam2gripper = np.array([[0.0069347, 0.69100592, -0.72281584],
+                                      [-0.99994363, -0.00101968, -0.01056827],
+                                      [-0.00803978, 0.72284838, 0.6909599]])
+            t_cam2gripper = np.array([[0.11904731],
+                                      [0.02483592],
+                                      [-0.10425902]])
 
-                # X0 = Z0 * (u - self.cx) / self.fx
-                # Y0 = Z0 * (v - self.cy) / self.fy
+            T_ftc_ca = np.vstack((np.hstack((R_cam2gripper, t_cam2gripper.reshape(3, 1))), np.array([0, 0, 0, 1])))
+            self.T_ftc_ca.data = T_ftc_ca.flatten()
+            # elif tag_idx == 1:
+            # get position of edge of apriltag in the corner of robot table
+            x_p_obj_img, y_p_obj_img = tag.corners[3]
+            # arrayPosition = y_p_obj_img * point_cloud.row_step + x_p_obj_img * point_cloud.point_step
+            # arrayPosX = arrayPosition + point_cloud.fields[0].offset
+            # arrayPosY = arrayPosition + point_cloud.fields[1].offset
+            # arrayPosZ = arrayPosition + point_cloud.fields[2].offset
+            # X = point_cloud.data[int(arrayPosX)]
+            # Y = point_cloud.data[int(arrayPosY)]
+            # Z = point_cloud.data[int(arrayPosZ)]
+            # # TODO check u and v
+            # v = x_p_obj_img
+            # u = y_p_obj_img
+            # depth_tmp = depth_image_copy[int(u) - 3:int(u) + 3, int(v) - 3:int(v) + 3]
+            # # TODO 0.500 [m] prior magic number
+            # acceptable_idx = depth_tmp < 0.500
+            # Z = np.mean(depth_tmp[acceptable_idx])
+            # X = Z * (u - self.cx) / self.fx
+            # Y = Z * (v - self.cy) / self.fy
+            u = int(x_p_obj_img)
+            v = int(y_p_obj_img)
 
-                u = int(x_y_ftc2_img)
-                v = int(y_y_ftc2_img)
-                us = np.linspace(u - dpix, u + dpix, 2*dpix+1, dtype=int)
-                vs = np.linspace(v - dpix, v + dpix, 2*dpix+1, dtype=int)
-                uvs= np.array(np.meshgrid(us, vs)).reshape(2, (2*dpix+1)**2).transpose().tolist()
-                D0 = list(sensor_msgs.point_cloud2.read_points(point_cloud, uvs=uvs))
-                D = np.nanmean(np.asarray(D0), 0)
-                X = D[0]
-                Y = D[1]
-                Z = D[2]
-                y_ftc2_ca = np.array([X, Y, Z])
+            # # ROS point cloud based
+            # us = np.linspace(u - 2, u + 2, 5, dtype=int)
+            # vs = np.linspace(v - 2, v + 2, 5, dtype=int)
+            # uvs= np.array(np.meshgrid(us, vs)).reshape(2, 25).transpose().tolist()
+            # D0 = list(sensor_msgs.point_cloud2.read_points(point_cloud, uvs=uvs))
+            # D = np.nanmean(np.asarray(D0), 0)
+            # # X = D[0]
+            # # Y = D[1]
+            # # Z = D[2]
+            # # ax.scatter(Z0, -X0, -Y0, color="blue")
+            # # ax.scatter(X, Y, Z, color="red")
+            # X = -D[1]
+            # Y = -D[2]
+            # Z = D[0]
+            # p_obj_ca = np.array([X, Y, Z])
 
-                if self.debug:
-                    print("y_ftc2_ca = {} [m].".format(y_ftc2_ca))
-                x_c_tag_img, y_c_tag_img = np.mean(tag.corners, 0)
-                # arrayPosition = y_c_tag_img * point_cloud.row_step + x_c_tag_img * point_cloud.point_step
-                # arrayPosX = arrayPosition + point_cloud.fields[0].offset
-                # arrayPosY = arrayPosition + point_cloud.fields[1].offset
-                # arrayPosZ = arrayPosition + point_cloud.fields[2].offset
-                # X = point_cloud.data[int(arrayPosX)]
-                # Y = point_cloud.data[int(arrayPosY)]
-                # Z = point_cloud.data[int(arrayPosZ)]
-                # # TODO check u and v
-                # v = x_c_tag_img
-                # u = y_c_tag_img
-                # depth_tmp = depth_image_copy[int(u) - 3:int(u) + 3, int(v) - 3:int(v) + 3]
-                # # TODO 0.250 [m] prior magic number
-                # acceptable_idx = depth_tmp < 0.250
-                # Z = np.mean(depth_tmp[acceptable_idx])
-                # X = Z * (u - self.cx) / self.fx
-                # Y = Z * (v - self.cy) / self.fy
-                u = int(x_c_tag_img)
-                v = int(y_c_tag_img)
-                us = np.linspace(u - 2, u + 2, 5, dtype=int)
-                vs = np.linspace(v - 2, v + 2, 5, dtype=int)
-                uvs= np.array(np.meshgrid(us, vs)).reshape(2, 25).transpose().tolist()
-                D0 = list(sensor_msgs.point_cloud2.read_points(point_cloud, uvs=uvs))
-                D = np.nanmean(np.asarray(D0), 0)
-                X = D[0]
-                Y = D[1]
-                Z = D[2]
-                c_tag_ca = np.array([X, Y, Z])
-                if self.debug:
-                    # print("y_c_tag_img = {} [m].".format(y_c_tag_img))
-                    print("c_tag_ca = {} [m].".format(c_tag_ca))
-                # cx=479.491
-                # cy=299.366
-                # fx=367.726
-                # fy=367.623
-                # # TODO check u and v
-                # v=x_c_tag_img
-                # u=y_c_tag_img
-                # depth_image = self.bridge.imgmsg_to_cv2(depth_image, desired_encoding='passthrough')
-                # z=depth_image[int(u),int(v)]
-                # x=depth_image[int(u),int(v)]*(u-self.cx/self.fx)
-                # y=depth_image[int(u),int(v)]*(v-self.cy/self.fy)
-                # print("(x,y,z)=",x,y,z)
-                z_ftc2_ca = t_ftc2_ca + (t_ftc2_ca - c_tag_ca)
-                x_ftc2_ca = np.cross(y_ftc2_ca, z_ftc2_ca)
-                if self.debug:
-                    print("x_ftc2_ca_atFTC2 = {} [m].".format((x_ftc2_ca-t_ftc2_ca)/ np.linalg.norm(x_ftc2_ca - t_ftc2_ca)))
-                    print("y_ftc2_ca_atFTC2 = {} [m].".format((y_ftc2_ca-t_ftc2_ca)/ np.linalg.norm(y_ftc2_ca - t_ftc2_ca)))
-                    print("z_ftc2_ca_atFTC2 = {} [m].".format((z_ftc2_ca-t_ftc2_ca)/ np.linalg.norm(z_ftc2_ca - t_ftc2_ca)))
-                    print("t_ftc2_ca = {} [m].".format(t_ftc2_ca))
+            # intrinsic based
+            Z0 = np.nanmean(depth_image_copy[v - 2: v + 2, u - 2: u + 2])
+            X0 = Z0 * (u - self.cx) / self.fx
+            Y0 = Z0 * (v - self.cy) / self.fy
+            p_obj_ca = np.array([X0, Y0, Z0])
 
-                R = np.vstack(((x_ftc2_ca - t_ftc2_ca) / np.linalg.norm((x_ftc2_ca - t_ftc2_ca)),
-                               (y_ftc2_ca - t_ftc2_ca) / np.linalg.norm((y_ftc2_ca - t_ftc2_ca)),
-                               (z_ftc2_ca - t_ftc2_ca) / np.linalg.norm((z_ftc2_ca - t_ftc2_ca)))).T
-                T_ca_ftc2 = np.vstack((np.hstack((R, t_ftc2_ca.reshape(3, 1))), np.array([0, 0, 0, 1])))
-                self.T_ca_ftc2.data = T_ca_ftc2.flatten()
-            elif tag_idx == 1:
-                # get position of edge of apriltag in the corner of robot table
-                x_p_obj_img, y_p_obj_img = tag.corners[3]
-                # arrayPosition = y_p_obj_img * point_cloud.row_step + x_p_obj_img * point_cloud.point_step
-                # arrayPosX = arrayPosition + point_cloud.fields[0].offset
-                # arrayPosY = arrayPosition + point_cloud.fields[1].offset
-                # arrayPosZ = arrayPosition + point_cloud.fields[2].offset
-                # X = point_cloud.data[int(arrayPosX)]
-                # Y = point_cloud.data[int(arrayPosY)]
-                # Z = point_cloud.data[int(arrayPosZ)]
-                # # TODO check u and v
-                # v = x_p_obj_img
-                # u = y_p_obj_img
-                # depth_tmp = depth_image_copy[int(u) - 3:int(u) + 3, int(v) - 3:int(v) + 3]
-                # # TODO 0.500 [m] prior magic number
-                # acceptable_idx = depth_tmp < 0.500
-                # Z = np.mean(depth_tmp[acceptable_idx])
-                # X = Z * (u - self.cx) / self.fx
-                # Y = Z * (v - self.cy) / self.fy
-                u = int(x_p_obj_img)
-                v = int(y_p_obj_img)
-                us = np.linspace(u - 2, u + 2, 5, dtype=int)
-                vs = np.linspace(v - 2, v + 2, 5, dtype=int)
-                uvs= np.array(np.meshgrid(us, vs)).reshape(2, 25).transpose().tolist()
-                D0 = list(sensor_msgs.point_cloud2.read_points(point_cloud, uvs=uvs))
-                D = np.nanmean(np.asarray(D0), 0)
-                X = D[0]
-                Y = D[1]
-                Z = D[2]
-                p_obj_ca = np.array([X, Y, Z])
-                self.p_obj_ca.x = p_obj_ca[0]
-                self.p_obj_ca.y = p_obj_ca[1]
-                self.p_obj_ca.z = p_obj_ca[2]
-                if self.debug:
-                    print("p_obj_ca = {} [m].".format(p_obj_ca))
+            self.p_obj_ca.x = p_obj_ca[0]
+            self.p_obj_ca.y = p_obj_ca[1]
+            self.p_obj_ca.z = p_obj_ca[2]
+            if self.debug:
+                print("p_obj_ca = {} [m].".format(p_obj_ca))
         if self.debug:
             self.cv2_imshow(color_image_copy, window_name="left image")
             self.cv2_imshow(depth_image_copy, window_name="depth image")
             # save 10 data for calibration
-            # cv2.imwrite("/home/user/code/zed-sdk/mahdi/log/debug_calibration/left_image_10.jpeg", color_image_copy)
-            # np.save("/home/user/code/zed-sdk/mahdi/log/debug_calibration/left_image_10.npy", color_image_copy)
-            # cv2.imwrite("/home/user/code/zed-sdk/mahdi/log/debug_calibration/depth_map_10.jpeg", depth_image_copy)
-            # np.save("/home/user/code/zed-sdk/mahdi/log/debug_calibration/depth_map_10.npy", depth_image_copy)
-            # D0 = list(sensor_msgs.point_cloud2.read_points(point_cloud))
-            # D = np.asarray(D0).reshape(540,960,4)
-            # np.save("/home/user/code/zed-sdk/mahdi/log/debug_calibration/point_cloud_10.npy", D)
-            # np.save("/home/user/code/zed-sdk/mahdi/log/debug_calibration/2Ddetections_10.npy", tag.corners)
-            # print("=============================")
-            # O_T_EE = np.array([[-0.949328,  -0.312601, -0.0322253,   0.338836],
-            #               [ -0.310152 ,  0.948508, -0.0641866 , -0.171729],
-            #               [ 0.0506308, -0.0509394,  -0.997417 ,  0.230203],
-            #               [0, 0, 0, 1]])
-            # np.save("/home/user/code/zed-sdk/mahdi/log/debug_calibration/O_T_EE_10.npy", O_T_EE)
-
+            cv2.imwrite("/home/user/code/zed-sdk/mahdi/log/debug_chess_calibration/left_image_1_smaller.jpeg", color_image_copy)
+            np.save("/home/user/code/zed-sdk/mahdi/log/debug_chess_calibration/left_image_1_smaller.npy", color_image_copy)
+            cv2.imwrite("/home/user/code/zed-sdk/mahdi/log/debug_chess_calibration/depth_map_1_smaller.jpeg", depth_image_copy)
+            np.save("/home/user/code/zed-sdk/mahdi/log/debug_chess_calibration/depth_map_1_smaller.npy", depth_image_copy)
+            D0 = list(sensor_msgs.point_cloud2.read_points(point_cloud))
+            # D = np.asarray(D0).reshape(540, 960, 4)
+            D = np.asarray(D0).reshape(1080, 1920, 4)
+            np.save("/home/user/code/zed-sdk/mahdi/log/debug_chess_calibration/point_cloud_1_smaller.npy", D)
+            np.save("/home/user/code/zed-sdk/mahdi/log/debug_chess_calibration/2Ddetections_1_smaller.npy", tag.corners)
+            print("=============================")
+            O_T_EE = np.array([[-0.0177987, -0.998865, 0.0439737, 0.252721],
+                               [-0.980237, 0.0260975, 0.196053, -0.230169],
+                               [-0.196978, -0.0396152, -0.979607, 0.293117],
+                               [0, 0, 0, 1]])
+            np.save("/home/user/code/zed-sdk/mahdi/log/debug_chess_calibration/O_T_EE_1.npy", O_T_EE)
+            print("hi")
         # self.pub_p_obj_ca.publish(self.p_obj_ca)
-        # self.pub_T_ca_ftc2.publish(self.T_ca_ftc2)
+        # self.pub_T_ftc_ca.publish(self.T_ftc_ca)
         # info = "p_obj_ca.x={}".format(self.p_obj_ca.x)
         # rospy.loginfo(info)
+
 
 if __name__ == '__main__':
 
@@ -404,9 +426,9 @@ if __name__ == '__main__':
         10, 0.1)
     ts.registerCallback(server.gotdata)
 
-    # publish p_obj_ca, T_ca_ftc2
+    # publish p_obj_ca, T_ftc_ca
     pub_p_obj_ca = rospy.Publisher('p_obj_ca', Vector3, queue_size=10)
-    pub_T_ca_ftc2 = rospy.Publisher('T_ca_ftc2', Float64MultiArray, queue_size=10)
+    pub_T_ftc_ca = rospy.Publisher('T_ftc_ca', Float64MultiArray, queue_size=10)
     # pub = rospy.Publisher('chatter222', String, queue_size=10)
     rate = rospy.Rate(1)  # 10hz
     while not rospy.is_shutdown():
@@ -420,7 +442,7 @@ if __name__ == '__main__':
         # server.p_obj_ca.z = 0
 
         pub_p_obj_ca.publish(server.p_obj_ca)
-        pub_T_ca_ftc2.publish(server.T_ca_ftc2)
+        pub_T_ftc_ca.publish(server.T_ftc_ca)
         if 0:
             info = "p_obj_ca.x={}".format(server.p_obj_ca.x)
             rospy.loginfo(info)
@@ -428,10 +450,10 @@ if __name__ == '__main__':
             rospy.loginfo(info)
             info = "p_obj_ca.z={}".format(server.p_obj_ca.z)
             rospy.loginfo(info)
-            info = "T_ca_ftc2.data={}".format(server.T_ca_ftc2.data)
+            info = "T_ftc_ca.data={}".format(server.T_ftc_ca.data)
             rospy.loginfo(info)
         # try:
-        #     info = "T_ca_ftc2.data[1]={}".format(server.T_ca_ftc2.data[0])
+        #     info = "T_ftc_ca.data[1]={}".format(server.T_ftc_ca.data[0])
         #     rospy.loginfo(info)
         # except:
         #     pass
