@@ -7,18 +7,18 @@ import cv2
 if __name__ == '__main__':
     # termination criteria
     criteria = (cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_MAX_ITER, 30, 0.001)
-    fname = '/home/user/code/zed-sdk/mahdi/log/debug_chess_calibration/left_image_1.jpeg'
+    fname = '/home/user/code/zed-sdk/mahdi/log/debug_chess_calibration/left_image_3.jpeg'
     img = cv2.imread(fname)
     gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
     # Find the chess board corners
     ret, corners = cv2.findChessboardCorners(gray, (7, 6), None)
     # If found, add object points, image points (after refining them)
     corners2 = cv2.cornerSubPix(gray, corners, (11, 11), (-1, -1), criteria)
-    np.save("/home/user/code/zed-sdk/mahdi/log/debug_chess_calibration/corners_chess_1.npy", corners2)
+    np.save("/home/user/code/zed-sdk/mahdi/log/debug_chess_calibration/corners_chess_2.npy", corners2)
     # Draw and display the corners
     cv2.drawChessboardCorners(img, (7, 6), corners2, ret)
     cv2.imshow('img', img)
-    cv2.imwrite("/home/user/code/zed-sdk/mahdi/log/debug_chess_calibration/detections_1.jpeg", img)
+    cv2.imwrite("/home/user/code/zed-sdk/mahdi/log/debug_chess_calibration/detections_2.jpeg", img)
     cv2.waitKey(0)
     cv2.destroyAllWindows()
 
@@ -91,7 +91,7 @@ if __name__ == '__main__':
                 p_c[2]=p_c_ROS[0]
 
                 # # intrinsic based
-                # depth_image=np.load("/home/user/code/zed-sdk/mahdi/log/debug_chess_calibration/depth_map_1.npy")
+                # depth_image=np.load("/home/user/code/zed-sdk/mahdi/log/debug_chess_calibration/depth_map_2.npy")
                 # Z0 = np.nanmean(depth_image[v - 2: v + 2, u - 2: u + 2])
                 # X0 = Z0 * (u - cx) / fx
                 # Y0 = Z0 * (v - cy) / fy
