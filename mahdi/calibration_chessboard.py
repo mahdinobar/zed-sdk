@@ -133,6 +133,7 @@ if __name__ == '__main__':
         t_gripper2base.append(O_T_EE_all[:3, 3, i].reshape((3, 1)))
     error_all=np.array(error_all).reshape(10, 54, 3)
     error_eucledian_all=np.array(error_eucledian_all).reshape(10, 54)
+    print("nan mean overall error per image:",np.nanmean(error_eucledian_all,1))
     np.save("/home/user/code/zed-sdk/mahdi/log/debug_chess_calibration_c/error_PnP.npy",error_all)
     R_cam2gripper, t_cam2gripper = cv2.calibrateHandEye(np.array(rvec_gripper2base), np.array(t_gripper2base),
                                                         np.array(R_target2cam),
