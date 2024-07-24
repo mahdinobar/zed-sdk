@@ -71,7 +71,14 @@ class Server:
         self.cx = 487.22515869140625
         self.cy = 258.14642333984375
         self.fx = 377.4441223144531
-        self.fy = 377.4441223144531
+        self.fy = 377.
+
+        # _f from /zedxm/zed_node/depth/camera_info
+        # ROS dept/camera_info fullHD no truncation
+        self.cx = 974.4503173828125
+        self.cy = 516.2928466796875
+        self.fx = 754.8882446289062
+        self.fy = 754.8882446289062
 
         self.debug = 0
 
@@ -329,12 +336,21 @@ class Server:
             #     # R = np.vstack(((x_ftc2_ca - t_ftc2_ca) / np.linalg.norm((x_ftc2_ca - t_ftc2_ca)),
             #     #                (y_ftc2_ca - t_ftc2_ca) / np.linalg.norm((y_ftc2_ca - t_ftc2_ca)),
             #     #                (z_ftc2_ca - t_ftc2_ca) / np.linalg.norm((z_ftc2_ca - t_ftc2_ca)))).T
-            R_cam2gripper = np.array([[0.0069347, 0.69100592, -0.72281584],
-                                      [-0.99994363, -0.00101968, -0.01056827],
-                                      [-0.00803978, 0.72284838, 0.6909599]])
-            t_cam2gripper = np.array([[0.11904731],
-                                      [0.02483592],
-                                      [-0.10425902]])
+            # # with Apriltags 10 data at /home/user/code/zed-sdk/mahdi/log/debug_calibration
+            # R_cam2gripper = np.array([[0.0069347, 0.69100592, -0.72281584],
+            #                           [-0.99994363, -0.00101968, -0.01056827],
+            #                           [-0.00803978, 0.72284838, 0.6909599]])
+            # t_cam2gripper = np.array([[0.11904731],
+            #                           [0.02483592],
+            #                           [-0.10425902]])
+
+            # with Chessboard 10 data at /home/user/code/zed-sdk/mahdi/log/debug_chess_calibration_b
+            R_cam2gripper = np.array([[-0.00715975,  0.68714525, -0.72648478],
+                             [-0.99971785, -0.0213735, -0.01036357],
+                             [-0.0226488,   0.7262056,  0.6871044]])
+            t_cam2gripper = np.array([[0.1266802],
+                             [0.02387603],
+                             [-0.11579095]])
 
             T_ftc_ca = np.vstack((np.hstack((R_cam2gripper, t_cam2gripper.reshape(3, 1))), np.array([0, 0, 0, 1])))
             self.T_ftc_ca.data = T_ftc_ca.flatten()
@@ -360,34 +376,36 @@ class Server:
             u = int(x_p_obj_img)
             v = int(y_p_obj_img)
 
-            # # ROS point cloud based
-            # us = np.linspace(u - 2, u + 2, 5, dtype=int)
-            # vs = np.linspace(v - 2, v + 2, 5, dtype=int)
-            # uvs= np.array(np.meshgrid(us, vs)).reshape(2, 25).transpose().tolist()
-            # D0 = list(sensor_msgs.point_cloud2.read_points(point_cloud, uvs=uvs))
-            # D = np.nanmean(np.asarray(D0), 0)
-            # # X = D[0]
-            # # Y = D[1]
-            # # Z = D[2]
-            # # ax.scatter(Z0, -X0, -Y0, color="blue")
-            # # ax.scatter(X, Y, Z, color="red")
-            # X = -D[1]
-            # Y = -D[2]
-            # Z = D[0]
-            # p_obj_ca = np.array([X, Y, Z])
+            # ROS point cloud based
+            us = np.linspace(u - 2, u + 2, 5, dtype=int)
+            vs = np.linspace(v - 2, v + 2, 5, dtype=int)
+            uvs= np.array(np.meshgrid(us, vs)).reshape(2, 25).transpose().tolist()
+            D0 = list(sensor_msgs.point_cloud2.read_points(point_cloud, uvs=uvs))
+            D = np.nanmean(np.asarray(D0), 0)
+            # X = D[0]
+            # Y = D[1]
+            # Z = D[2]
+            # ax.scatter(Z0, -X0, -Y0, color="blue")
+            # ax.scatter(X, Y, Z, color="red")
+            X = -D[1]
+            Y = -D[2]
+            Z = D[0]
+            print("-----np.array([X, Y, Z])=",np.array([X, Y, Z]))
 
             # intrinsic based
             Z0 = np.nanmean(depth_image_copy[v - 2: v + 2, u - 2: u + 2])
             X0 = Z0 * (u - self.cx) / self.fx
             Y0 = Z0 * (v - self.cy) / self.fy
             p_obj_ca = np.array([X0, Y0, Z0])
+            print("+++++np.array([X0, Y0, Z0]))=",np.array([X0, Y0, Z0]))
+            np.save("/home/user/code/zed-sdk/mahdi/log/marqlev_calib/p_c_3.npy",p_obj_ca)
 
             self.p_obj_ca.x = p_obj_ca[0]
             self.p_obj_ca.y = p_obj_ca[1]
             self.p_obj_ca.z = p_obj_ca[2]
             if self.debug:
                 print("p_obj_ca = {} [m].".format(p_obj_ca))
-        if 1:
+        if 0:
             self.cv2_imshow(color_image_copy, window_name="left image")
             self.cv2_imshow(depth_image_copy, window_name="depth image")
             # save 10 data for calibration
@@ -400,7 +418,7 @@ class Server:
             corners2 = cv2.cornerSubPix(gray, corners, (11, 11), (-1, -1), criteria)
             print("corners2=", corners2)
             np.save("/home/user/code/zed-sdk/mahdi/log/debug_chess_calibration_b/corners_chese_1.npy", corners2)
-            if 1:
+            if 0:
                 np.save("/home/user/code/zed-sdk/mahdi/log/debug_chess_calibration_b/left_image_1.npy", color_image_copy)
                 cv2.imwrite("/home/user/code/zed-sdk/mahdi/log/debug_chess_calibration_b/depth_map_1.jpeg",
                             depth_image_copy)

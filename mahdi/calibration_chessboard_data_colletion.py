@@ -123,37 +123,40 @@ class Server:
         # self.p_obj_ca.x = p_obj_ca[0]
         # self.p_obj_ca.y = p_obj_ca[1]
         # self.p_obj_ca.z = p_obj_ca[2]
-        gray = cv2.cvtColor(color_image_copy, cv2.COLOR_BGR2GRAY)
-        # Find the chess board corners
-        ret, corners = cv2.findChessboardCorners(gray, (9, 6), None)
-        # If found, add object points, image points (after refining them)
-        criteria = (cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_MAX_ITER, 30, 0.001)
-        corners2 = cv2.cornerSubPix(gray, corners, (11, 11), (-1, -1), criteria)
-        cv2.drawChessboardCorners(color_image_copy, (9, 6), corners2, ret)
         self.cv2_imshow(color_image_copy, window_name="left image")
-        self.cv2_imshow(depth_image_copy, window_name="depth image")
+        try:
+            gray = cv2.cvtColor(color_image_copy, cv2.COLOR_BGR2GRAY)
+            # Find the chess board corners
+            ret, corners = cv2.findChessboardCorners(gray, (9, 6), None)
+            # If found, add object points, image points (after refining them)
+            criteria = (cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_MAX_ITER, 300, 0.001)
+            corners2 = cv2.cornerSubPix(gray, corners, (11, 11), (-1, -1), criteria)
+            cv2.drawChessboardCorners(color_image_copy, (9, 6), corners2, ret)
+            self.cv2_imshow(color_image_copy, window_name="left image")
+        except:
+            pass
+        # self.cv2_imshow(depth_image_copy, window_name="depth image")
         if log_data:
             cv2.imwrite(
-                "/home/user/code/zed-sdk/mahdi/log/debug_chess_calibration_b/image_left_marked_{}.jpeg".format(N),
+                "/home/user/code/zed-sdk/mahdi/log/debug_chess_calibration_c/image_left_marked_{}.jpeg".format(N),
                 color_image_copy)
-            np.save("/home/user/code/zed-sdk/mahdi/log/debug_chess_calibration_b/corners_chess_{}.npy".format(N),
+            np.save("/home/user/code/zed-sdk/mahdi/log/debug_chess_calibration_c/corners_chess_{}.npy".format(N),
                     corners2)
-            np.save("/home/user/code/zed-sdk/mahdi/log/debug_chess_calibration_b/depth_map_1.npy", depth_image_copy)
             np.save(
-                "/home/user/code/zed-sdk/mahdi/log/debug_chess_calibration_b/Chessboard_detections_{}.npy".format(N),
+                "/home/user/code/zed-sdk/mahdi/log/debug_chess_calibration_c/Chessboard_detections_{}.npy".format(N),
                 corners2)
             D0 = list(sensor_msgs.point_cloud2.read_points(point_cloud))
-            D = np.asarray(D0).reshape(1080, 1920, 4)
-            np.save("/home/user/code/zed-sdk/mahdi/log/debug_chess_calibration_b/ROS_point_cloud_{}.npy".format(N), D)
-            # np.save("/home/user/code/zed-sdk/mahdi/log/debug_chess_calibration_b/Apriltag_detections_{}.npy".format(N),
+            D = np.asarray(D0).reshape(1200, 1920, 4)
+            np.save("/home/user/code/zed-sdk/mahdi/log/debug_chess_calibration_c/ROS_point_cloud_{}.npy".format(N), D)
+            # np.save("/home/user/code/zed-sdk/mahdi/log/debug_chess_calibration_c/Apriltag_detections_{}.npy".format(N),
             #         tag.corners)
             # O_T_EE = np.array([[0.0193126, -0.999226, -0.0339827, 0.248292],
             #                    [-0.961512, -0.0278786, 0.273313, -0.272983],
             #                    [-0.274049, 0.0273964, -0.961325, 0.298596],
             #                    [0, 0, 0, 1]])
-            O_T_EE = np.array([0.9787121045785148, 0.20449799191710724, 0.016850357698677973, 0.0, 0.20480542422313097, -0.9786055196742101, -0.01914998624440152, 0.0, 0.012573961407912016, 0.02219379529603048, -0.9996746125339336, 0.0, 0.30518694423734655, 0.08591081687344139, 0.3534510688756968, 1.0]).reshape(4, 4).T
-            np.save("/home/user/code/zed-sdk/mahdi/log/debug_chess_calibration_b/O_T_EE_{}.npy".format(N), O_T_EE)
-            print("!")
+            O_T_EE = np.array([-0.06592312064855622, -0.9225310518665557, 0.38022539027154717, 0.0, -0.9978118531803502, 0.061914812577159, -0.02277736897753026, 0.0, -0.0025288023014268628, -0.38090229008565785, -0.9246118377818994, 0.0, 0.659343811132454, -0.2303783221521881, 0.10666191344576441, 1.0]).reshape(4, 4).T
+            np.save("/home/user/code/zed-sdk/mahdi/log/debug_chess_calibration_c/O_T_EE_{}.npy".format(N), O_T_EE)
+            print("data are saved.")
 
 
 if __name__ == '__main__':
