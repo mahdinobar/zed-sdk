@@ -70,9 +70,9 @@ def parse_args(init):
 def main():
     print("Running Depth Sensing sample ... Press 'Esc' to quit\nPress 's' to save the point cloud")
 
-    init = sl.InitParameters(depth_mode=sl.DEPTH_MODE.ULTRA,
+    init = sl.InitParameters(depth_mode=sl.DEPTH_MODE.NEURAL,
                                  coordinate_units=sl.UNIT.METER,
-                                 coordinate_system=sl.COORDINATE_SYSTEM.RIGHT_HANDED_Y_UP)
+                                 coordinate_system=sl.COORDINATE_SYSTEM.LEFT_HANDED_Z_UP)
     parse_args(init)
     zed = sl.Camera()
     status = zed.open(init)
@@ -81,10 +81,14 @@ def main():
         exit()
 
     res = sl.Resolution()
-    res.width = 720
-    res.height = 404
+    res.width = 1920
+    res.height = 1200
 
     camera_model = zed.get_camera_information().camera_model
+    calibration_params = zed.get_camera_information().camera_configuration.calibration_parameters
+    print("calibration_params.left_cam=",calibration_params.left_cam)
+    print("calibration_params.right_cam=",calibration_params.right_cam)
+    print("calibration_params.stereo_transform=",calibration_params.stereo_transform)
     # Create OpenGL viewer
     viewer = gl.GLViewer()
     viewer.init(1, sys.argv, camera_model, res)
@@ -113,7 +117,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument('--input_svo_file', type=str, help='Path to an .svo file, if you want to replay it',default = '')
     parser.add_argument('--ip_address', type=str, help='IP Adress, in format a.b.c.d:port or a.b.c.d, if you have a streaming setup', default = '')
-    parser.add_argument('--resolution', type=str, help='Resolution, can be either HD2K, HD1200, HD1080, HD720, SVGA or VGA', default = '')
+    parser.add_argument('--resolution', type=str, help='Resolution, can be either HD2K, HD1200, HD1080, HD720, SVGA or VGA', default = 'HD1200')
     opt = parser.parse_args()
     if len(opt.input_svo_file)>0 and len(opt.ip_address)>0:
         print("Specify only input_svo_file or ip_address, or none to use wired camera, not both. Exit program")
