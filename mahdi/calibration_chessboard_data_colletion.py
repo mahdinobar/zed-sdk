@@ -65,8 +65,12 @@ class Server:
         cv2.destroyAllWindows()
 
     def gotdata(self, gray_image, color_image, depth_image, point_cloud):
-        N = 9
-        log_data=1
+        N = 201
+        log_data = 1
+        O_T_EE = np.array([0.058487896153253345, -0.2934875842206725, 0.9541619101667643, 0.0, -0.7479825753354957,
+                           -0.6458724585399134, -0.1528122416408308, 0.0, 0.6611281231681304, -0.704772385385899,
+                           -0.2573042742623125, 0.0, 0.4259679219173819, 0.060157769686237685, 0.1221867316976898,
+                           1.0]).reshape(4, 4).T
         if self.debug:
             print("timestamp_gray_image={} [ns]".format(gray_image.header.stamp.nsecs))
             print("timestamp_color_image={} [ns]".format(color_image.header.stamp.nsecs))
@@ -77,13 +81,13 @@ class Server:
         depth_image = np.array(self.bridge.imgmsg_to_cv2(depth_image, desired_encoding='passthrough'), dtype=np.float32)
         depth_image_copy = depth_image.copy()
         if log_data:
-            cv2.imwrite("/home/user/code/zed-sdk/mahdi/log/debug_chess_calibration_b/image_left_{}.jpeg".format(N),
+            cv2.imwrite("/home/user/code/zed-sdk/mahdi/log/debug_chess_calibration_d/image_left_{}.jpeg".format(N),
                         color_image_copy)
-            np.save("/home/user/code/zed-sdk/mahdi/log/debug_chess_calibration_b/image_left_{}.npy".format(N),
+            np.save("/home/user/code/zed-sdk/mahdi/log/debug_chess_calibration_d/image_left_{}.npy".format(N),
                     color_image_copy)
-            cv2.imwrite("/home/user/code/zed-sdk/mahdi/log/debug_chess_calibration_b/depth_map_{}.jpeg".format(N),
+            cv2.imwrite("/home/user/code/zed-sdk/mahdi/log/debug_chess_calibration_d/depth_map_{}.jpeg".format(N),
                         depth_image_copy)
-            np.save("/home/user/code/zed-sdk/mahdi/log/debug_chess_calibration_b/depth_map_{}.npy".format(N),
+            np.save("/home/user/code/zed-sdk/mahdi/log/debug_chess_calibration_d/depth_map_{}.npy".format(N),
                     depth_image_copy)
         # tags = self.at_detector.detect(gray_image, False, camera_params=None)
         # tag_idx = 0
@@ -132,30 +136,35 @@ class Server:
             criteria = (cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_MAX_ITER, 300, 0.001)
             corners2 = cv2.cornerSubPix(gray, corners, (11, 11), (-1, -1), criteria)
             cv2.drawChessboardCorners(color_image_copy, (9, 6), corners2, ret)
+            for idx in range(0, 54):
+                cv2.putText(color_image_copy, str(idx),
+                            org=(corners2.squeeze()[idx, 0].astype(int), corners2.squeeze()[idx, 1].astype(int)),
+                            fontFace=cv2.FONT_HERSHEY_SIMPLEX,
+                            fontScale=0.4,
+                            color=(255, 0, 0))
             self.cv2_imshow(color_image_copy, window_name="left image")
         except:
             pass
         # self.cv2_imshow(depth_image_copy, window_name="depth image")
         if log_data:
             cv2.imwrite(
-                "/home/user/code/zed-sdk/mahdi/log/debug_chess_calibration_c/image_left_marked_{}.jpeg".format(N),
+                "/home/user/code/zed-sdk/mahdi/log/debug_chess_calibration_d/image_left_marked_{}.jpeg".format(N),
                 color_image_copy)
-            np.save("/home/user/code/zed-sdk/mahdi/log/debug_chess_calibration_c/corners_chess_{}.npy".format(N),
+            np.save("/home/user/code/zed-sdk/mahdi/log/debug_chess_calibration_d/corners_chess_{}.npy".format(N),
                     corners2)
             np.save(
-                "/home/user/code/zed-sdk/mahdi/log/debug_chess_calibration_c/Chessboard_detections_{}.npy".format(N),
+                "/home/user/code/zed-sdk/mahdi/log/debug_chess_calibration_d/Chessboard_detections_{}.npy".format(N),
                 corners2)
             D0 = list(sensor_msgs.point_cloud2.read_points(point_cloud))
             D = np.asarray(D0).reshape(1200, 1920, 4)
-            np.save("/home/user/code/zed-sdk/mahdi/log/debug_chess_calibration_c/ROS_point_cloud_{}.npy".format(N), D)
-            # np.save("/home/user/code/zed-sdk/mahdi/log/debug_chess_calibration_c/Apriltag_detections_{}.npy".format(N),
+            np.save("/home/user/code/zed-sdk/mahdi/log/debug_chess_calibration_d/ROS_point_cloud_{}.npy".format(N), D)
+            # np.save("/home/user/code/zed-sdk/mahdi/log/debug_chess_calibration_d/Apriltag_detections_{}.npy".format(N),
             #         tag.corners)
             # O_T_EE = np.array([[0.0193126, -0.999226, -0.0339827, 0.248292],
             #                    [-0.961512, -0.0278786, 0.273313, -0.272983],
             #                    [-0.274049, 0.0273964, -0.961325, 0.298596],
             #                    [0, 0, 0, 1]])
-            O_T_EE = np.array([-0.06592312064855622, -0.9225310518665557, 0.38022539027154717, 0.0, -0.9978118531803502, 0.061914812577159, -0.02277736897753026, 0.0, -0.0025288023014268628, -0.38090229008565785, -0.9246118377818994, 0.0, 0.659343811132454, -0.2303783221521881, 0.10666191344576441, 1.0]).reshape(4, 4).T
-            np.save("/home/user/code/zed-sdk/mahdi/log/debug_chess_calibration_c/O_T_EE_{}.npy".format(N), O_T_EE)
+            np.save("/home/user/code/zed-sdk/mahdi/log/debug_chess_calibration_d/O_T_EE_{}.npy".format(N), O_T_EE)
             print("data are saved.")
 
 

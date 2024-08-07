@@ -42,7 +42,7 @@ class Server:
         self.fx = 367.72650146484375
         self.fy = 367.6239929199219
 
-        self.debug = 0
+        self.debug = 1
 
         # self.pub_p_obj_ca = rospy.Publisher('p_obj_ca', Vector3, queue_size=10)
         # self.pub_T_ca_ftc2 = rospy.Publisher('T_ca_ftc2', Float64MultiArray, queue_size=10)
