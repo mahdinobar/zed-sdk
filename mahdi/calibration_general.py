@@ -39,8 +39,8 @@ def rectification(raw_l, raw_r, A_raw_l, A_raw_r):
 
 
 if __name__ == '__main__':
-    # conf=np.load("/home/user/code/zed-sdk/mahdi/log/debug_calib_100/depth_conf_twochess_manualgt.npy")
-    log_dir = "/home/user/code/zed-sdk/mahdi/log/debug_calib_100"
+    # conf=np.load("/home/user/code/zed-sdk/mahdi/log/debug_calib_100/depth_conf_1.npy")
+    log_dir = "/home/user/code/zed-sdk/mahdi/log/hand_to_eye_calibration"
     # Create a Camera object
     zed = sl.Camera()
     # Create a InitParameters object and set configuration parameters
@@ -165,23 +165,14 @@ if __name__ == '__main__':
     retval, r_t2c, t_t2c, reprojErr = cv2.solvePnPGeneric(objectPoints, imagePoints, cameraMatrix,
                                                           distCoeffs=A_rect_l.disto,
                                                           flags=cv2.SOLVEPNP_ITERATIVE)
-    np.save(log_dir+"/r_t2c_twochess_manualgt.npy", r_t2c)
-    np.save(log_dir+"/t_t2c_twochess_manualgt.npy", t_t2c)
-    np.save(log_dir + "/depth_l_twochess_manualgt.npy", depth_l)
-    cv2.imwrite(log_dir + "/depth_conf_img_twochess_manualgt.jpeg", depth_conf_img.get_data())
-    np.save(log_dir + "/depth_conf_twochess_manualgt.npy", depth_conf)
-    cv2.imwrite(log_dir + "/depth_img_twochess_manualgt.jpeg", depth_img.get_data())
-    cv2.imwrite(log_dir + "/img_l_twochess_manualgt.jpeg", img_l)
-    np.save(log_dir + "/img_l_twochess_manualgt.npy", img_l)
-    np.save(log_dir + "/imagePoints_twochess_manualgt.npy", imagePoints)
-    np.save(log_dir + "/objectPoints_twochess_manualgt.npy", objectPoints)
-    np.save(log_dir + "/corners2_twochess_manualgt.npy", corners2)
+    print("reprojErr=",reprojErr)
+
 
     # # # TODO
     # r_t2c = np.load(log_dir + "/r_t2c.npy")
     # t_t2c = np.load(log_dir + "/t_t2c.npy")
-    # r_t2c = np.load(log_dir + "/r_t2c_twochess_manualgt.npy")
-    # t_t2c = np.load(log_dir + "/t_t2c_twochess_manualgt.npy")
+    # r_t2c = np.load(log_dir + "/r_t2c_1.npy")
+    # t_t2c = np.load(log_dir + "/t_t2c_1.npy")
 
     H_t2c = np.vstack((np.hstack((cv2.Rodrigues(r_t2c[0])[0], t_t2c[0])), np.array([0, 0, 0, 1])))
     t_c2t = -np.matrix(cv2.Rodrigues(r_t2c[0])[0]).T * np.matrix(t_t2c[0])
@@ -190,7 +181,7 @@ if __name__ == '__main__':
                        np.array([0, 0, 0, 1])))
     err_all_c = []
     err_all_t = []
-    for k in range(54):
+    for k in range(108):
         u = int(imagePoints[k, :, 0])
         v = int(imagePoints[k, :, 1])
         Z = np.nanmean(depth_l[v - 2: v + 2, u - 2: u + 2])
@@ -214,3 +205,20 @@ if __name__ == '__main__':
         err_all_t.append(np.linalg.norm(err_t))
     print("mean err_all_c[mm]", np.mean(err_all_c))
     print("mean err_all_t[mm]", np.mean(err_all_t))
+
+    O_T_EE = np.array([0.058487896153253345, -0.2934875842206725, 0.9541619101667643, 0.0, -0.7479825753354957,
+                       -0.6458724585399134, -0.1528122416408308, 0.0, 0.6611281231681304, -0.704772385385899,
+                       -0.2573042742623125, 0.0, 0.4259679219173819, 0.060157769686237685, 0.1221867316976898,
+                       1.0]).reshape(4, 4).T
+    np.save(log_dir+"/r_t2c_1.npy", r_t2c)
+    np.save(log_dir+"/t_t2c_1.npy", t_t2c)
+    np.save(log_dir + "/depth_l_1.npy", depth_l)
+    cv2.imwrite(log_dir + "/depth_conf_img_1.jpeg", depth_conf_img.get_data())
+    np.save(log_dir + "/depth_conf_1.npy", depth_conf)
+    cv2.imwrite(log_dir + "/depth_img_1.jpeg", depth_img.get_data())
+    cv2.imwrite(log_dir + "/img_l_1.jpeg", img_l)
+    np.save(log_dir + "/img_l_1.npy", img_l)
+    np.save(log_dir + "/imagePoints_1.npy", imagePoints)
+    np.save(log_dir + "/objectPoints_1.npy", objectPoints)
+    np.save(log_dir + "/corners2_1.npy", corners2)
+
