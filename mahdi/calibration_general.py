@@ -39,6 +39,7 @@ def rectification(raw_l, raw_r, A_raw_l, A_raw_r):
 
 
 if __name__ == '__main__':
+    # conf=np.load("/home/user/code/zed-sdk/mahdi/log/debug_calib_100/depth_conf_twochess_manualgt.npy")
     log_dir = "/home/user/code/zed-sdk/mahdi/log/debug_calib_100"
     # Create a Camera object
     zed = sl.Camera()
@@ -79,14 +80,15 @@ if __name__ == '__main__':
         # # Retrieve right image
         # zed.retrieve_image(image, sl.VIEW.RIGHT)
         # cv2_imshow(image.get_data(), window_name="right image")
-        # # Retrieve side by side image
+        # # # Retrieve side by side image
         # zed.retrieve_image(image, sl.VIEW.SIDE_BY_SIDE )
-        # # imS = cv2.resize(cv2.cvtColor(image.get_data(), cv2.COLOR_BGRA2RGBA), (1920, 1200))
-        # cv2_imshow(image.get_data(), window_name="SIDE_BY_SIDE  image")
+        # imS = cv2.resize(cv2.cvtColor(image.get_data(), cv2.COLOR_BGRA2RGBA), (1920, 1200))
+        # cv2_imshow(imS, window_name="SIDE_BY_SIDE  image")
         # Retrieve depth map. Depth is aligned on the left image
         zed.retrieve_measure(depth, sl.MEASURE.DEPTH)
         depth_l = depth.get_data()
         zed.retrieve_measure(depth_conf, sl.MEASURE.CONFIDENCE)
+        # TODO
         depth_conf = depth_conf.get_data()
         zed.retrieve_image(depth_img, sl.VIEW.DEPTH)
         cv2_imshow(depth_img.get_data(), window_name="depth map")
@@ -95,12 +97,25 @@ if __name__ == '__main__':
         # Close the camera
     zed.close()
 
-    objectPoints = np.zeros((6 * 9, 3), np.float32)
-    cube_length = 36.2  # [m]
+    cube_length = 36.2  # [mm]
     tmp = np.mgrid[0:9, 0:6].T.reshape(-1, 2) * np.array([-1, 1])
-    objectPoints[:, 0] = tmp[:, 0] * cube_length + 570.5
-    objectPoints[:, 2] = tmp[:, 1] * cube_length + 20.2
-    objectPoints[:, 1] += -305
+    objectPoints1 = np.zeros((6 * 9, 3), np.float32)
+    objectPoints1[:, 0] = tmp[:, 0] * cube_length + (12.5 * 50 - 12.8 - 36.2)
+    objectPoints1[:, 1] = -2.5 * 50 - 22.5 - 7
+    objectPoints1[:, 2] = tmp[:, 1] * cube_length + 8.9 + 36.2 - 25
+
+    objectPoints2 = np.zeros((6 * 9, 3), np.float32)
+    objectPoints2[:, 1] = tmp[:, 0] * cube_length - (25 - 3 + 36.2)
+    objectPoints2[:, 0] = +4.5 * 50 + 4
+    objectPoints2[:, 2] = tmp[:, 1] * cube_length + 8.9 + 36.2 - 25
+
+    objectPoints = np.vstack((objectPoints1, objectPoints2))
+
+    # cube_length = 18.5  # [mm]
+    # tmp = np.mgrid[0:18, 0:11].T.reshape(-1, 2) * np.array([-1, 1])
+    # objectPoints[:, 0] = tmp[:, 0] * cube_length + 5
+    # objectPoints[:, 1] = -103.5
+    # objectPoints[:, 2] = tmp[:, 1] * cube_length * 2 - 25 + 8.9
 
     try:
         gray = cv2.cvtColor(img_l, cv2.COLOR_BGR2GRAY)
@@ -120,26 +135,53 @@ if __name__ == '__main__':
     except:
         pass
 
-    imagePoints = corners2.reshape((54, 1, 2))
+    imagePoints1 = corners2.reshape((54, 1, 2))
+    # repeat fpr the second chessboard
+    try:
+        gray[:, 800:] = 0
+        # Find the chess board corners
+        ret, corners = cv2.findChessboardCorners(gray, (9, 6), None)
+        # If found, add object points, image points (after refining them)
+        criteria = (cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_MAX_ITER, 300, 0.001)
+        corners2 = cv2.cornerSubPix(gray, corners, (11, 11), (-1, -1), criteria)
+        cv2.drawChessboardCorners(img_l, (9, 6), corners2, ret)
+        for idx in range(0, 54):
+            cv2.putText(img_l, str(idx),
+                        org=(corners2.squeeze()[idx, 0].astype(int), corners2.squeeze()[idx, 1].astype(int)),
+                        fontFace=cv2.FONT_HERSHEY_SIMPLEX,
+                        fontScale=0.4,
+                        color=(255, 0, 0))
+        cv2_imshow(img_l, window_name="left image")
+    except:
+        pass
+    imagePoints2 = corners2.reshape((54, 1, 2))
+    imagePoints = np.vstack((imagePoints1, imagePoints2))
     objpts = []  # 3d point in real world space
     objpts.append(objectPoints)
     imgpts = []  # 3d point in real world space
     imgpts.append(corners2)
     cameraMatrix = np.array([[A_rect_l.fx, 0, A_rect_l.cx], [0, A_rect_l.fy, A_rect_l.cy], [0, 0, 1]])
+
     retval, r_t2c, t_t2c, reprojErr = cv2.solvePnPGeneric(objectPoints, imagePoints, cameraMatrix,
                                                           distCoeffs=A_rect_l.disto,
                                                           flags=cv2.SOLVEPNP_ITERATIVE)
-    np.save(log_dir+"/r_t2c.npy", r_t2c)
-    np.save(log_dir+"/t_t2c.npy", t_t2c)
-    np.save(log_dir + "/depth_l.npy", depth_l)
-    cv2.imwrite(log_dir + "/depth_conf_img.jpeg", depth_conf_img.get_data())
-    np.save(log_dir + "/depth_conf.npy", depth_conf)
-    cv2.imwrite(log_dir + "/depth_img.jpeg", depth_img.get_data())
-    cv2.imwrite(log_dir + "/img_l.jpeg", img_l)
-    np.save(log_dir + "/img_l.npy", img_l)
+    np.save(log_dir+"/r_t2c_twochess_manualgt.npy", r_t2c)
+    np.save(log_dir+"/t_t2c_twochess_manualgt.npy", t_t2c)
+    np.save(log_dir + "/depth_l_twochess_manualgt.npy", depth_l)
+    cv2.imwrite(log_dir + "/depth_conf_img_twochess_manualgt.jpeg", depth_conf_img.get_data())
+    np.save(log_dir + "/depth_conf_twochess_manualgt.npy", depth_conf)
+    cv2.imwrite(log_dir + "/depth_img_twochess_manualgt.jpeg", depth_img.get_data())
+    cv2.imwrite(log_dir + "/img_l_twochess_manualgt.jpeg", img_l)
+    np.save(log_dir + "/img_l_twochess_manualgt.npy", img_l)
+    np.save(log_dir + "/imagePoints_twochess_manualgt.npy", imagePoints)
+    np.save(log_dir + "/objectPoints_twochess_manualgt.npy", objectPoints)
+    np.save(log_dir + "/corners2_twochess_manualgt.npy", corners2)
+
     # # # TODO
     # r_t2c = np.load(log_dir + "/r_t2c.npy")
     # t_t2c = np.load(log_dir + "/t_t2c.npy")
+    # r_t2c = np.load(log_dir + "/r_t2c_twochess_manualgt.npy")
+    # t_t2c = np.load(log_dir + "/t_t2c_twochess_manualgt.npy")
 
     H_t2c = np.vstack((np.hstack((cv2.Rodrigues(r_t2c[0])[0], t_t2c[0])), np.array([0, 0, 0, 1])))
     t_c2t = -np.matrix(cv2.Rodrigues(r_t2c[0])[0]).T * np.matrix(t_t2c[0])
@@ -157,6 +199,7 @@ if __name__ == '__main__':
         P_c = np.array([X, Y, Z, 1])
         P_t = np.append(objectPoints[k, :], 1)
         P_c_hat = np.matrix(H_t2c) * np.matrix(P_t.reshape(4, 1))
+        # P_c_hat = H_t2c @ P_t.reshape(4,1)
         P_t_hat = np.matrix(H_c2t) * np.matrix(P_c.reshape(4, 1))
         err_c = P_c_hat[:3] - P_c[:3].reshape(3, 1)
         err_t = P_t_hat[:3] - P_t[:3].reshape(3, 1)
