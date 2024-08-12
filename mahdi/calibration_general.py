@@ -276,8 +276,8 @@ def check_accuracy(log_dir):
     init_params.coordinate_units = sl.UNIT.MILLIMETER  # Use meter units (for depth measurements)
     # TODO check this
     init_params.camera_disable_self_calib = False
-    init_params.depth_minimum_distance = 100  # Set the minimum depth perception distance
-    init_params.depth_maximum_distance = 600  # Set the maximum depth perception distance
+    init_params.depth_minimum_distance = 200  # Set the minimum depth perception distance
+    init_params.depth_maximum_distance = 900  # Set the maximum depth perception distance
     # Open the camera
     status = zed.open(init_params)
     if status != sl.ERROR_CODE.SUCCESS:  # Ensure the camera has opened succesfully
@@ -297,7 +297,7 @@ def check_accuracy(log_dir):
         # Retrieve left image
         zed.retrieve_image(image, sl.VIEW.LEFT)
         img_l = image.get_data()
-        cv2_imshow(image.get_data(), window_name="left image")
+        cv2_imshow(img_l, window_name="left image")
         zed.retrieve_measure(depth, sl.MEASURE.DEPTH)
         depth_l = depth.get_data()
         zed.retrieve_measure(depth_conf, sl.MEASURE.CONFIDENCE)
@@ -309,8 +309,7 @@ def check_accuracy(log_dir):
                                 refine_edges=1,
                                 decode_sharpening=0.25,
                                 debug=0)
-    # img_l=np.load(log_dir + "/img_l_{}.npy".format(str(id)))
-    # depth_l=np.load(log_dir + "/depth_l_{}.npy".format(str(id)))
+    # load calibration data
     r_t2c=np.load(log_dir + "/r_t2c_{}.npy".format(str(id)))
     t_t2c=np.load(log_dir + "/t_t2c_{}.npy".format(str(id)))
     A=np.load(log_dir + "/A_rect_l_{}.npy".format(str(id)))
@@ -339,7 +338,7 @@ def check_accuracy(log_dir):
                         fontFace=cv2.FONT_HERSHEY_SIMPLEX,
                         fontScale=0.5,
                         color=(255, 0, 0))
-
+        cv2_imshow(img_l, window_name="left image + Apriltag detections")
 
         H_t2c = np.vstack((np.hstack((cv2.Rodrigues(r_t2c[0])[0], t_t2c[0])), np.array([0, 0, 0, 1])))
         t_c2t = -np.matrix(cv2.Rodrigues(r_t2c[0])[0]).T * np.matrix(t_t2c[0])
@@ -348,26 +347,23 @@ def check_accuracy(log_dir):
                            np.array([0, 0, 0, 1])))
         err_all_c = []
         err_all_t = []
-        # for k in range(4):
-        k=3
-        x_p_obj_img, y_p_obj_img = tag.corners[k]
-        objectPoints=np.array([5.5*50-5,-4.5*50,-25+5])
-        u = int(x_p_obj_img)
-        v = int(y_p_obj_img)
-
+        # for idx_tag in range(4):
+        idx_tag=3
+        u, v = tag.corners[idx_tag]
+        u = int(u)
+        v = int(v)
         Z = np.nanmean(depth_l[v - 2: v + 2, u - 2: u + 2])
         X = Z * (u - A[2]) / A[0]
         Y = Z * (v - A[3]) / A[1]
         P_c = np.array([X, Y, Z, 1])
-        P_t = np.append(objectPoints, 1)
+        # manually measure
+        P_t = np.append(np.array([10.5*50-30.5+4.8+0.5,-1.5*50-15,-25+76.4+4.8]), 1)
         P_c_hat = np.matrix(H_t2c) * np.matrix(P_t.reshape(4, 1))
         # P_c_hat = H_t2c @ P_t.reshape(4,1)
         P_t_hat = np.matrix(H_c2t) * np.matrix(P_c.reshape(4, 1))
         err_c = P_c_hat[:3] - P_c[:3].reshape(3, 1)
         err_t = P_t_hat[:3] - P_t[:3].reshape(3, 1)
-        # print("(***ONLY X and Z should be near zero) err_t[mm]=", err_t)
-        # print("(***ONLY Y and Z should be near zero) err_t[mm]=", err_t)
-        print("k={}\n".format(k))
+        print("idx_tag={}\n".format(idx_tag))
         print("err_c[mm]=", err_c)
         print("norm(err_c)[mm]=", np.linalg.norm(err_c))
         err_all_c.append(np.linalg.norm(err_c))
@@ -376,8 +372,7 @@ def check_accuracy(log_dir):
         err_all_t.append(np.linalg.norm(err_t))
         print("mean err_all_c[mm]", np.mean(err_all_c))
         print("mean err_all_t[mm]", np.mean(err_all_t))
-
-
+        print("ended.")
 
 if __name__ == '__main__':
 
