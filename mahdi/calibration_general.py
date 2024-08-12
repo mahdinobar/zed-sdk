@@ -9,6 +9,7 @@ import numpy as np
 import sys
 import math
 import cv2
+from dt_apriltags import Detector
 
 
 def cv2_imshow(a, window_name="image"):
@@ -38,11 +39,12 @@ def rectification(raw_l, raw_r, A_raw_l, A_raw_r):
     return rec_l, rec_r
 
 
-if __name__ == '__main__':
-    # conf=np.load("/home/user/code/zed-sdk/mahdi/log/debug_calib_100/depth_conf_1.npy")
-    log_dir = "/home/user/code/zed-sdk/mahdi/log/hand_to_eye_calibration"
+def save_calib_data(log_dir):
     # Create a Camera object
     zed = sl.Camera()
+    # roi = sl.Rect(42, 56, 120, 15)
+    # zed.set_camera_settings_roi(sl.VIDEO_SETTINGS.AEC_AGC_ROI, roi, sl.SIDE.BOTH)
+
     # Create a InitParameters object and set configuration parameters
     init_params = sl.InitParameters()
     init_params.depth_mode = sl.DEPTH_MODE.NEURAL  # Use ULTRA depth mode
@@ -61,6 +63,11 @@ if __name__ == '__main__':
     A_rect_l = cam_info.camera_configuration.calibration_parameters.left_cam
     # Create and set RuntimeParameters after opening the camera
     runtime_parameters = sl.RuntimeParameters()
+    id = 1
+    # O_T_EE = np.array(
+    #     [0.5857499126595401, -0.807897207019151, 0.06465206579224003, 0.0, -0.8095020378945257, -0.5792613229089174,
+    #      0.09562174087324073, 0.0, -0.039802862550637655, -0.10834849142197248, -0.9933158292000374, 0.0,
+    #      0.2847365754690908, -0.2245196045043414, 0.20950541682112178, 1.0]).reshape(4, 4).T
     image = sl.Mat()
     depth = sl.Mat()
     depth_conf = sl.Mat()
@@ -95,19 +102,26 @@ if __name__ == '__main__':
         zed.retrieve_image(depth_conf_img, sl.VIEW.CONFIDENCE)
         cv2_imshow(depth_conf_img.get_data(), window_name="depth confidence map")
         # Close the camera
-    zed.close()
 
     cube_length = 36.2  # [mm]
-    tmp = np.mgrid[0:9, 0:6].T.reshape(-1, 2) * np.array([-1, 1])
-    objectPoints1 = np.zeros((6 * 9, 3), np.float32)
-    objectPoints1[:, 0] = tmp[:, 0] * cube_length + (12.5 * 50 - 12.8 - 36.2)
-    objectPoints1[:, 1] = -2.5 * 50 - 22.5 - 7
-    objectPoints1[:, 2] = tmp[:, 1] * cube_length + 8.9 + 36.2 - 25
+    n_x = 9
+    n_y = 6
+    tmp = np.mgrid[0:n_x, 0:n_y].T.reshape(-1, 2) * np.array([1, -1])
+    objectPoints1 = np.zeros((n_y * n_x, 3), np.float32)
+    # objectPoints[:, 0] = tmp[:, 0] * cube_length
+    # objectPoints[:, 2] = 0
+    # objectPoints[:, 1] = tmp[:, 1] * cube_length
+    # objectPoints[:, 0] = tmp[:, 0] * cube_length + (12.5 * 50 - 12.8 - 36.2)
+    # objectPoints[:, 1] = -2.5 * 50 - 22.5 - 7
+    # objectPoints[:, 2] = tmp[:, 1] * cube_length + 8.9 + 36.2 - 25
+    objectPoints1[:, 0] = tmp[:, 0] * cube_length + (12.5 * 50 + 87.5 - 20.5 - cube_length) - 8 * cube_length
+    objectPoints1[:, 1] = -3.5 * 50 - 20.7 - 6.9
+    objectPoints1[:, 2] = tmp[:, 1] * cube_length - 25 + 38.2 + cube_length + 5 * cube_length
 
-    objectPoints2 = np.zeros((6 * 9, 3), np.float32)
-    objectPoints2[:, 1] = tmp[:, 0] * cube_length - (25 - 3 + 36.2)
-    objectPoints2[:, 0] = +4.5 * 50 + 4
-    objectPoints2[:, 2] = tmp[:, 1] * cube_length + 8.9 + 36.2 - 25
+    objectPoints2 = np.zeros((n_x * n_y, 3), np.float32)
+    objectPoints2[:, 0] = +3.5 * 50 + 20.7 + 4.5
+    objectPoints2[:, 1] = tmp[:, 0] * cube_length + 1.5 * 50 + 23 - 101.8 - cube_length - 8 * cube_length
+    objectPoints2[:, 2] = tmp[:, 1] * cube_length + 39 + cube_length - 25+ 5 * cube_length
 
     objectPoints = np.vstack((objectPoints1, objectPoints2))
 
@@ -120,75 +134,232 @@ if __name__ == '__main__':
     try:
         gray = cv2.cvtColor(img_l, cv2.COLOR_BGR2GRAY)
         # Find the chess board corners
-        ret, corners = cv2.findChessboardCorners(gray, (9, 6), None)
+        ret, corners = cv2.findChessboardCorners(gray, (n_x, n_y), None)
         # If found, add object points, image points (after refining them)
         criteria = (cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_MAX_ITER, 300, 0.001)
         corners2 = cv2.cornerSubPix(gray, corners, (11, 11), (-1, -1), criteria)
-        cv2.drawChessboardCorners(img_l, (9, 6), corners2, ret)
-        for idx in range(0, 54):
+        cv2.drawChessboardCorners(img_l, (n_x, n_y), corners2, ret)
+        for idx in range(0, n_x * n_y):
             cv2.putText(img_l, str(idx),
                         org=(corners2.squeeze()[idx, 0].astype(int), corners2.squeeze()[idx, 1].astype(int)),
                         fontFace=cv2.FONT_HERSHEY_SIMPLEX,
                         fontScale=0.4,
                         color=(255, 0, 0))
         cv2_imshow(img_l, window_name="left image")
+
+        imagePoints1 = corners2.reshape((n_x * n_y, 1, 2))
+        # repeat fpr the second chessboard
+        try:
+            gray[:, 800:] = 0
+            # Find the chess board corners
+            ret, corners = cv2.findChessboardCorners(gray, (n_x, n_y), None)
+            # If found, add object points, image points (after refining them)
+            criteria = (cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_MAX_ITER, 300, 0.001)
+            corners2 = cv2.cornerSubPix(gray, corners, (11, 11), (-1, -1), criteria)
+            cv2.drawChessboardCorners(img_l, (n_x, n_y), corners2, ret)
+            for idx in range(0, n_x * n_y):
+                cv2.putText(img_l, str(idx),
+                            org=(corners2.squeeze()[idx, 0].astype(int), corners2.squeeze()[idx, 1].astype(int)),
+                            fontFace=cv2.FONT_HERSHEY_SIMPLEX,
+                            fontScale=0.4,
+                            color=(255, 0, 0))
+            cv2_imshow(img_l, window_name="left image")
+        except:
+            pass
+        imagePoints2 = corners2.reshape((n_x * n_y, 1, 2))
+        imagePoints = np.vstack((imagePoints1, imagePoints2))
+        objpts = []  # 3d point in real world space
+        objpts.append(objectPoints)
+        imgpts = []  # 3d point in real world space
+        imgpts.append(corners2)
+        cameraMatrix = np.array([[A_rect_l.fx, 0, A_rect_l.cx], [0, A_rect_l.fy, A_rect_l.cy], [0, 0, 1]])
+
+        retval, r_t2c, t_t2c, reprojErr = cv2.solvePnPGeneric(objectPoints, imagePoints, cameraMatrix,
+                                                              distCoeffs=A_rect_l.disto,
+                                                              flags=cv2.SOLVEPNP_ITERATIVE)
+        print("reprojErr=", reprojErr)
+
+        # # # TODO
+        # r_t2c = np.load(log_dir + "/r_t2c.npy")
+        # t_t2c = np.load(log_dir + "/t_t2c.npy")
+        # r_t2c = np.load(log_dir + "/r_t2c_1.npy")
+        # t_t2c = np.load(log_dir + "/t_t2c_1.npy")
+
+        H_t2c = np.vstack((np.hstack((cv2.Rodrigues(r_t2c[0])[0], t_t2c[0])), np.array([0, 0, 0, 1])))
+        t_c2t = -np.matrix(cv2.Rodrigues(r_t2c[0])[0]).T * np.matrix(t_t2c[0])
+        R_c2t = np.matrix(cv2.Rodrigues(r_t2c[0])[0]).T
+        H_c2t = np.vstack((np.hstack((R_c2t, t_c2t.reshape(3, 1))),
+                           np.array([0, 0, 0, 1])))
+        err_all_c = []
+        err_all_t = []
+        for k in range(n_x * n_y):
+            u = int(imagePoints[k, :, 0])
+            v = int(imagePoints[k, :, 1])
+            Z = np.nanmean(depth_l[v - 2: v + 2, u - 2: u + 2])
+            X = Z * (u - A_rect_l.cx) / A_rect_l.fx
+            Y = Z * (v - A_rect_l.cy) / A_rect_l.fy
+            P_c = np.array([X, Y, Z, 1])
+            P_t = np.append(objectPoints[k, :], 1)
+            P_c_hat = np.matrix(H_t2c) * np.matrix(P_t.reshape(4, 1))
+            # P_c_hat = H_t2c @ P_t.reshape(4,1)
+            P_t_hat = np.matrix(H_c2t) * np.matrix(P_c.reshape(4, 1))
+            err_c = P_c_hat[:3] - P_c[:3].reshape(3, 1)
+            err_t = P_t_hat[:3] - P_t[:3].reshape(3, 1)
+            # print("(***ONLY X and Z should be near zero) err_t[mm]=", err_t)
+            # print("(***ONLY Y and Z should be near zero) err_t[mm]=", err_t)
+            print("k={}\n".format(k))
+            print("err_c[mm]=", err_c)
+            print("norm(err_c)[mm]=", np.linalg.norm(err_c))
+            err_all_c.append(np.linalg.norm(err_c))
+            print("err_t[mm]=", err_t)
+            print("norm(err_t)[mm]=", np.linalg.norm(err_t))
+            err_all_t.append(np.linalg.norm(err_t))
+        print("mean err_all_c[mm]", np.mean(err_all_c))
+        print("mean err_all_t[mm]", np.mean(err_all_t))
+
     except:
         pass
 
-    imagePoints1 = corners2.reshape((54, 1, 2))
-    # repeat fpr the second chessboard
-    try:
-        gray[:, 800:] = 0
-        # Find the chess board corners
-        ret, corners = cv2.findChessboardCorners(gray, (9, 6), None)
-        # If found, add object points, image points (after refining them)
-        criteria = (cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_MAX_ITER, 300, 0.001)
-        corners2 = cv2.cornerSubPix(gray, corners, (11, 11), (-1, -1), criteria)
-        cv2.drawChessboardCorners(img_l, (9, 6), corners2, ret)
-        for idx in range(0, 54):
+    np.save(log_dir + "/r_t2c_{}.npy".format(str(id)), r_t2c)
+    np.save(log_dir + "/t_t2c_{}.npy".format(str(id)), t_t2c)
+    np.save(log_dir + "/depth_l_{}.npy".format(str(id)), depth_l)
+    cv2.imwrite(log_dir + "/depth_conf_img_{}.jpeg".format(str(id)), depth_conf_img.get_data())
+    np.save(log_dir + "/depth_conf_{}.npy".format(str(id)), depth_conf)
+    cv2.imwrite(log_dir + "/depth_img_{}.jpeg".format(str(id)), depth_img.get_data())
+    cv2.imwrite(log_dir + "/img_l_{}.jpeg".format(str(id)), img_l)
+    np.save(log_dir + "/img_l_{}.npy".format(str(id)), img_l)
+    np.save(log_dir + "/imagePoints_{}.npy".format(str(id)), imagePoints)
+    np.save(log_dir + "/objectPoints_{}.npy".format(str(id)), objectPoints)
+    np.save(log_dir + "/corners2_{}.npy".format(str(id)), corners2)
+    A=np.array([A_rect_l.fx,A_rect_l.fy,A_rect_l.cx,A_rect_l.cy])
+    np.save(log_dir + "/A_rect_l_{}.npy".format(str(id)), A)
+    # np.save(log_dir + "/O_T_EE_{}.npy".format(str(id)), O_T_EE)
+
+    zed.close()
+
+
+def hand_to_eye_calib(log_dir):
+    r_t2c = []
+    t_t2c = []
+    r_b2g = []
+    t_b2g = []
+    N = 5
+    for k in range(1, N + 1):
+        r_t2c_ = np.load(log_dir + "/r_t2c_{}.npy".format(str(k)))
+        t_t2c_ = np.load(log_dir + "/t_t2c_{}.npy".format(str(k)))
+        H_g2b = np.load(log_dir + "/O_T_EE_{}.npy".format(str(k)))
+
+        r_t2c = np.append(r_t2c, r_t2c_.reshape(3, 1))
+        t_t2c = np.append(t_t2c, t_t2c_.reshape(3, 1))
+
+        R_g2b = H_g2b[0:3, 0:3]
+        t_g2b = H_g2b[3, 0:3]
+
+        r_b2g = np.append(r_b2g, cv2.Rodrigues(R_g2b.T)[0])
+        t_b2g = np.append(t_b2g, -R_g2b.T @ t_g2b)
+
+    r_t2c = r_t2c.reshape(3, N)
+    t_t2c = t_t2c.reshape(3, N)
+    r_b2g = r_b2g.reshape(3, N)
+    t_b2g = t_b2g.reshape(3, N)
+
+    r_c2b, t_c2b = cv2.calibrateHandEye(r_b2g.T, t_b2g.T, r_t2c.T, t_t2c.T, method=cv2.CALIB_HAND_EYE_TSAI)
+    print("r_c2b=", r_c2b)
+    print("t_c2b=", t_c2b)
+
+def check_accuracy(log_dir):
+    id=1
+    zed = sl.Camera()
+    # Create a InitParameters object and set configuration parameters
+    init_params = sl.InitParameters()
+    init_params.depth_mode = sl.DEPTH_MODE.NEURAL  # Use ULTRA depth mode
+    init_params.coordinate_units = sl.UNIT.MILLIMETER  # Use meter units (for depth measurements)
+    # TODO check this
+    init_params.camera_disable_self_calib = False
+    init_params.depth_minimum_distance = 100  # Set the minimum depth perception distance
+    init_params.depth_maximum_distance = 600  # Set the maximum depth perception distance
+    # Open the camera
+    status = zed.open(init_params)
+    if status != sl.ERROR_CODE.SUCCESS:  # Ensure the camera has opened succesfully
+        print("Camera Open : " + repr(status) + ". Exit program.")
+        exit()
+    cam_info = zed.get_camera_information()
+    # Create and set RuntimeParameters after opening the camera
+    runtime_parameters = sl.RuntimeParameters()
+    image = sl.Mat()
+    depth = sl.Mat()
+    depth_conf = sl.Mat()
+    depth_conf_img = sl.Mat()
+    depth_img = sl.Mat()
+    point_cloud = sl.Mat()
+    # A new image is available if grab() returns SUCCESS
+    if zed.grab(runtime_parameters) == sl.ERROR_CODE.SUCCESS:
+        # Retrieve left image
+        zed.retrieve_image(image, sl.VIEW.LEFT)
+        img_l = image.get_data()
+        cv2_imshow(image.get_data(), window_name="left image")
+        zed.retrieve_measure(depth, sl.MEASURE.DEPTH)
+        depth_l = depth.get_data()
+        zed.retrieve_measure(depth_conf, sl.MEASURE.CONFIDENCE)
+    at_detector = Detector(searchpath=['apriltags'],
+                                families='tag36h11',
+                                nthreads=1,
+                                quad_decimate=1.0,
+                                quad_sigma=0.0,
+                                refine_edges=1,
+                                decode_sharpening=0.25,
+                                debug=0)
+    # img_l=np.load(log_dir + "/img_l_{}.npy".format(str(id)))
+    # depth_l=np.load(log_dir + "/depth_l_{}.npy".format(str(id)))
+    r_t2c=np.load(log_dir + "/r_t2c_{}.npy".format(str(id)))
+    t_t2c=np.load(log_dir + "/t_t2c_{}.npy".format(str(id)))
+    A=np.load(log_dir + "/A_rect_l_{}.npy".format(str(id)))
+    gray = cv2.cvtColor(img_l, cv2.COLOR_BGR2GRAY)
+    tags = at_detector.detect(gray, False, camera_params=None)
+    for tag in tags:
+        for idx in range(len(tag.corners)):
+            # print(
+            #     "!!corner detected on image plane location = ({},{}) [pxls].".format(
+            #         tag.corners[idx, 0], tag.corners[idx, 1]))
+            cv2.line(img_l, tuple(tag.corners[idx - 1, :].astype(int)),
+                     tuple(tag.corners[idx, :].astype(int)),
+                     (0, 255, 0))
+            cv2.drawMarker(img_l, tuple(tag.corners[idx, :].astype(int)), color=(255, 0, 0))
             cv2.putText(img_l, str(idx),
-                        org=(corners2.squeeze()[idx, 0].astype(int), corners2.squeeze()[idx, 1].astype(int)),
+                        org=(tag.corners[idx, 0].astype(int) + 3, tag.corners[idx, 1].astype(int) + 3),
                         fontFace=cv2.FONT_HERSHEY_SIMPLEX,
-                        fontScale=0.4,
+                        fontScale=0.5,
                         color=(255, 0, 0))
-        cv2_imshow(img_l, window_name="left image")
-    except:
-        pass
-    imagePoints2 = corners2.reshape((54, 1, 2))
-    imagePoints = np.vstack((imagePoints1, imagePoints2))
-    objpts = []  # 3d point in real world space
-    objpts.append(objectPoints)
-    imgpts = []  # 3d point in real world space
-    imgpts.append(corners2)
-    cameraMatrix = np.array([[A_rect_l.fx, 0, A_rect_l.cx], [0, A_rect_l.fy, A_rect_l.cy], [0, 0, 1]])
-
-    retval, r_t2c, t_t2c, reprojErr = cv2.solvePnPGeneric(objectPoints, imagePoints, cameraMatrix,
-                                                          distCoeffs=A_rect_l.disto,
-                                                          flags=cv2.SOLVEPNP_ITERATIVE)
-    print("reprojErr=",reprojErr)
+            cv2.line(img_l, tuple(tag.corners[idx - 1, :].astype(int)),
+                     tuple(tag.corners[idx, :].astype(int)),
+                     (0, 255, 0))
+            cv2.drawMarker(img_l, tuple(tag.corners[idx, :].astype(int)), color=(255, 0, 0))
+            cv2.putText(img_l, str(idx),
+                        org=(tag.corners[idx, 0].astype(int) + 3, tag.corners[idx, 1].astype(int) + 3),
+                        fontFace=cv2.FONT_HERSHEY_SIMPLEX,
+                        fontScale=0.5,
+                        color=(255, 0, 0))
 
 
-    # # # TODO
-    # r_t2c = np.load(log_dir + "/r_t2c.npy")
-    # t_t2c = np.load(log_dir + "/t_t2c.npy")
-    # r_t2c = np.load(log_dir + "/r_t2c_1.npy")
-    # t_t2c = np.load(log_dir + "/t_t2c_1.npy")
+        H_t2c = np.vstack((np.hstack((cv2.Rodrigues(r_t2c[0])[0], t_t2c[0])), np.array([0, 0, 0, 1])))
+        t_c2t = -np.matrix(cv2.Rodrigues(r_t2c[0])[0]).T * np.matrix(t_t2c[0])
+        R_c2t = np.matrix(cv2.Rodrigues(r_t2c[0])[0]).T
+        H_c2t = np.vstack((np.hstack((R_c2t, t_c2t.reshape(3, 1))),
+                           np.array([0, 0, 0, 1])))
+        err_all_c = []
+        err_all_t = []
+        # for k in range(4):
+        k=3
+        x_p_obj_img, y_p_obj_img = tag.corners[k]
+        objectPoints=np.array([5.5*50-5,-4.5*50,-25+5])
+        u = int(x_p_obj_img)
+        v = int(y_p_obj_img)
 
-    H_t2c = np.vstack((np.hstack((cv2.Rodrigues(r_t2c[0])[0], t_t2c[0])), np.array([0, 0, 0, 1])))
-    t_c2t = -np.matrix(cv2.Rodrigues(r_t2c[0])[0]).T * np.matrix(t_t2c[0])
-    R_c2t = np.matrix(cv2.Rodrigues(r_t2c[0])[0]).T
-    H_c2t = np.vstack((np.hstack((R_c2t, t_c2t.reshape(3, 1))),
-                       np.array([0, 0, 0, 1])))
-    err_all_c = []
-    err_all_t = []
-    for k in range(108):
-        u = int(imagePoints[k, :, 0])
-        v = int(imagePoints[k, :, 1])
         Z = np.nanmean(depth_l[v - 2: v + 2, u - 2: u + 2])
-        X = Z * (u - A_rect_l.cx) / A_rect_l.fx
-        Y = Z * (v - A_rect_l.cy) / A_rect_l.fy
+        X = Z * (u - A[2]) / A[0]
+        Y = Z * (v - A[3]) / A[1]
         P_c = np.array([X, Y, Z, 1])
-        P_t = np.append(objectPoints[k, :], 1)
+        P_t = np.append(objectPoints, 1)
         P_c_hat = np.matrix(H_t2c) * np.matrix(P_t.reshape(4, 1))
         # P_c_hat = H_t2c @ P_t.reshape(4,1)
         P_t_hat = np.matrix(H_c2t) * np.matrix(P_c.reshape(4, 1))
@@ -203,22 +374,14 @@ if __name__ == '__main__':
         print("err_t[mm]=", err_t)
         print("norm(err_t)[mm]=", np.linalg.norm(err_t))
         err_all_t.append(np.linalg.norm(err_t))
-    print("mean err_all_c[mm]", np.mean(err_all_c))
-    print("mean err_all_t[mm]", np.mean(err_all_t))
+        print("mean err_all_c[mm]", np.mean(err_all_c))
+        print("mean err_all_t[mm]", np.mean(err_all_t))
 
-    O_T_EE = np.array([0.058487896153253345, -0.2934875842206725, 0.9541619101667643, 0.0, -0.7479825753354957,
-                       -0.6458724585399134, -0.1528122416408308, 0.0, 0.6611281231681304, -0.704772385385899,
-                       -0.2573042742623125, 0.0, 0.4259679219173819, 0.060157769686237685, 0.1221867316976898,
-                       1.0]).reshape(4, 4).T
-    np.save(log_dir+"/r_t2c_1.npy", r_t2c)
-    np.save(log_dir+"/t_t2c_1.npy", t_t2c)
-    np.save(log_dir + "/depth_l_1.npy", depth_l)
-    cv2.imwrite(log_dir + "/depth_conf_img_1.jpeg", depth_conf_img.get_data())
-    np.save(log_dir + "/depth_conf_1.npy", depth_conf)
-    cv2.imwrite(log_dir + "/depth_img_1.jpeg", depth_img.get_data())
-    cv2.imwrite(log_dir + "/img_l_1.jpeg", img_l)
-    np.save(log_dir + "/img_l_1.npy", img_l)
-    np.save(log_dir + "/imagePoints_1.npy", imagePoints)
-    np.save(log_dir + "/objectPoints_1.npy", objectPoints)
-    np.save(log_dir + "/corners2_1.npy", corners2)
 
+
+if __name__ == '__main__':
+
+    log_dir = "/home/user/code/zed-sdk/mahdi/log/hand_to_eye_calibration/two_t_on_table"
+    # save_calib_data(log_dir)
+    # hand_to_eye_calib(log_dir)
+    check_accuracy(log_dir)
