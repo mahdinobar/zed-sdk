@@ -50,9 +50,9 @@ def save_calib_data(log_dir):
     init_params.depth_mode = sl.DEPTH_MODE.NEURAL  # Use ULTRA depth mode
     init_params.coordinate_units = sl.UNIT.MILLIMETER  # Use meter units (for depth measurements)
     # TODO check this
-    init_params.camera_disable_self_calib = False
-    init_params.depth_minimum_distance = 100  # Set the minimum depth perception distance
-    init_params.depth_maximum_distance = 600  # Set the maximum depth perception distance
+    init_params.camera_disable_self_calib = True
+    init_params.depth_minimum_distance = 200  # Set the minimum depth perception distance
+    init_params.depth_maximum_distance = 900  # Set the maximum depth perception distance
     # Open the camera
     status = zed.open(init_params)
     if status != sl.ERROR_CODE.SUCCESS:  # Ensure the camera has opened succesfully
@@ -275,10 +275,10 @@ def check_accuracy(log_dir):
     init_params.depth_mode = sl.DEPTH_MODE.NEURAL  # Use ULTRA depth mode
     init_params.coordinate_units = sl.UNIT.MILLIMETER  # Use meter units (for depth measurements)
     # TODO check this
-    init_params.camera_disable_self_calib = False
+    init_params.camera_disable_self_calib = True
     init_params.depth_minimum_distance = 200  # Set the minimum depth perception distance
     init_params.depth_maximum_distance = 900  # Set the maximum depth perception distance
-    # Open the camera
+    # Open the camera(after you call the open here then the rectification is applied)
     status = zed.open(init_params)
     if status != sl.ERROR_CODE.SUCCESS:  # Ensure the camera has opened succesfully
         print("Camera Open : " + repr(status) + ". Exit program.")
@@ -357,7 +357,7 @@ def check_accuracy(log_dir):
         Y = Z * (v - A[3]) / A[1]
         P_c = np.array([X, Y, Z, 1])
         # manually measure
-        P_t = np.append(np.array([10.5*50-30.5+4.8+0.5,-1.5*50-15,-25+76.4+4.8]), 1)
+        P_t = np.append(np.array([10.5*50-30.5+4.8+0.5,-4.5*50-15,-25+76.4+4.8]), 1)
         P_c_hat = np.matrix(H_t2c) * np.matrix(P_t.reshape(4, 1))
         # P_c_hat = H_t2c @ P_t.reshape(4,1)
         P_t_hat = np.matrix(H_c2t) * np.matrix(P_c.reshape(4, 1))
