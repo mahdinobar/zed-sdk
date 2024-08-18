@@ -11,6 +11,11 @@ import math
 import cv2
 from dt_apriltags import Detector
 
+import rospy
+from sensor_msgs.msg import Image, CameraInfo
+import message_filters
+from cv_bridge import CvBridge
+
 
 def cv2_imshow(a, window_name="image"):
     """A replacement for cv2.imshow() for use in Jupyter notebooks.
@@ -44,7 +49,6 @@ def save_calib_data(log_dir):
     zed = sl.Camera()
     # roi = sl.Rect(42, 56, 120, 15)
     # zed.set_camera_settings_roi(sl.VIDEO_SETTINGS.AEC_AGC_ROI, roi, sl.SIDE.BOTH)
-
     # Create a InitParameters object and set configuration parameters
     init_params = sl.InitParameters()
     init_params.depth_mode = sl.DEPTH_MODE.NEURAL  # Use ULTRA depth mode
@@ -77,7 +81,6 @@ def save_calib_data(log_dir):
     # mirror_ref = sl.Transform()
     # # TODO what is this?
     # mirror_ref.set_translation(sl.Translation(2.75, 4.0, 0))
-
     # A new image is available if grab() returns SUCCESS
     if zed.grab(runtime_parameters) == sl.ERROR_CODE.SUCCESS:
         # Retrieve left image
@@ -102,7 +105,6 @@ def save_calib_data(log_dir):
         zed.retrieve_image(depth_conf_img, sl.VIEW.CONFIDENCE)
         cv2_imshow(depth_conf_img.get_data(), window_name="depth confidence map")
         # Close the camera
-
     cube_length = 36.2  # [mm]
     n_x = 9
     n_y = 6
@@ -117,20 +119,16 @@ def save_calib_data(log_dir):
     objectPoints1[:, 0] = tmp[:, 0] * cube_length + (12.5 * 50 + 87.5 - 20.5 - cube_length) - 8 * cube_length
     objectPoints1[:, 1] = -3.5 * 50 - 20.7 - 6.9
     objectPoints1[:, 2] = tmp[:, 1] * cube_length - 25 + 38.2 + cube_length + 5 * cube_length
-
     objectPoints2 = np.zeros((n_x * n_y, 3), np.float32)
     objectPoints2[:, 0] = +3.5 * 50 + 20.7 + 4.5
     objectPoints2[:, 1] = tmp[:, 0] * cube_length + 1.5 * 50 + 23 - 101.8 - cube_length - 8 * cube_length
-    objectPoints2[:, 2] = tmp[:, 1] * cube_length + 39 + cube_length - 25+ 5 * cube_length
-
+    objectPoints2[:, 2] = tmp[:, 1] * cube_length + 39 + cube_length - 25 + 5 * cube_length
     objectPoints = np.vstack((objectPoints1, objectPoints2))
-
     # cube_length = 18.5  # [mm]
     # tmp = np.mgrid[0:18, 0:11].T.reshape(-1, 2) * np.array([-1, 1])
     # objectPoints[:, 0] = tmp[:, 0] * cube_length + 5
     # objectPoints[:, 1] = -103.5
     # objectPoints[:, 2] = tmp[:, 1] * cube_length * 2 - 25 + 8.9
-
     try:
         gray = cv2.cvtColor(img_l, cv2.COLOR_BGR2GRAY)
         # Find the chess board corners
@@ -146,7 +144,6 @@ def save_calib_data(log_dir):
                         fontScale=0.4,
                         color=(255, 0, 0))
         cv2_imshow(img_l, window_name="left image")
-
         imagePoints1 = corners2.reshape((n_x * n_y, 1, 2))
         # repeat fpr the second chessboard
         try:
@@ -173,18 +170,15 @@ def save_calib_data(log_dir):
         imgpts = []  # 3d point in real world space
         imgpts.append(corners2)
         cameraMatrix = np.array([[A_rect_l.fx, 0, A_rect_l.cx], [0, A_rect_l.fy, A_rect_l.cy], [0, 0, 1]])
-
         retval, r_t2c, t_t2c, reprojErr = cv2.solvePnPGeneric(objectPoints, imagePoints, cameraMatrix,
                                                               distCoeffs=A_rect_l.disto,
                                                               flags=cv2.SOLVEPNP_ITERATIVE)
         print("reprojErr=", reprojErr)
-
         # # # TODO
         # r_t2c = np.load(log_dir + "/r_t2c.npy")
         # t_t2c = np.load(log_dir + "/t_t2c.npy")
         # r_t2c = np.load(log_dir + "/r_t2c_1.npy")
         # t_t2c = np.load(log_dir + "/t_t2c_1.npy")
-
         H_t2c = np.vstack((np.hstack((cv2.Rodrigues(r_t2c[0])[0], t_t2c[0])), np.array([0, 0, 0, 1])))
         t_c2t = -np.matrix(cv2.Rodrigues(r_t2c[0])[0]).T * np.matrix(t_t2c[0])
         R_c2t = np.matrix(cv2.Rodrigues(r_t2c[0])[0]).T
@@ -216,10 +210,8 @@ def save_calib_data(log_dir):
             err_all_t.append(np.linalg.norm(err_t))
         print("mean err_all_c[mm]", np.mean(err_all_c))
         print("mean err_all_t[mm]", np.mean(err_all_t))
-
     except:
         pass
-
     np.save(log_dir + "/r_t2c_{}.npy".format(str(id)), r_t2c)
     np.save(log_dir + "/t_t2c_{}.npy".format(str(id)), t_t2c)
     np.save(log_dir + "/depth_l_{}.npy".format(str(id)), depth_l)
@@ -231,10 +223,9 @@ def save_calib_data(log_dir):
     np.save(log_dir + "/imagePoints_{}.npy".format(str(id)), imagePoints)
     np.save(log_dir + "/objectPoints_{}.npy".format(str(id)), objectPoints)
     np.save(log_dir + "/corners2_{}.npy".format(str(id)), corners2)
-    A=np.array([A_rect_l.fx,A_rect_l.fy,A_rect_l.cx,A_rect_l.cy])
+    A = np.array([A_rect_l.fx, A_rect_l.fy, A_rect_l.cx, A_rect_l.cy])
     np.save(log_dir + "/A_rect_l_{}.npy".format(str(id)), A)
     # np.save(log_dir + "/O_T_EE_{}.npy".format(str(id)), O_T_EE)
-
     zed.close()
 
 
@@ -257,18 +248,17 @@ def hand_to_eye_calib(log_dir):
 
         r_b2g = np.append(r_b2g, cv2.Rodrigues(R_g2b.T)[0])
         t_b2g = np.append(t_b2g, -R_g2b.T @ t_g2b)
-
     r_t2c = r_t2c.reshape(3, N)
     t_t2c = t_t2c.reshape(3, N)
     r_b2g = r_b2g.reshape(3, N)
     t_b2g = t_b2g.reshape(3, N)
-
     r_c2b, t_c2b = cv2.calibrateHandEye(r_b2g.T, t_b2g.T, r_t2c.T, t_t2c.T, method=cv2.CALIB_HAND_EYE_TSAI)
     print("r_c2b=", r_c2b)
     print("t_c2b=", t_c2b)
 
+
 def check_accuracy(log_dir):
-    id=1
+    id = 1
     zed = sl.Camera()
     # Create a InitParameters object and set configuration parameters
     init_params = sl.InitParameters()
@@ -302,17 +292,17 @@ def check_accuracy(log_dir):
         depth_l = depth.get_data()
         zed.retrieve_measure(depth_conf, sl.MEASURE.CONFIDENCE)
     at_detector = Detector(searchpath=['apriltags'],
-                                families='tag36h11',
-                                nthreads=1,
-                                quad_decimate=1.0,
-                                quad_sigma=0.0,
-                                refine_edges=1,
-                                decode_sharpening=0.25,
-                                debug=0)
+                           families='tag36h11',
+                           nthreads=1,
+                           quad_decimate=1.0,
+                           quad_sigma=0.0,
+                           refine_edges=1,
+                           decode_sharpening=0.25,
+                           debug=0)
     # load calibration data
-    r_t2c=np.load(log_dir + "/r_t2c_{}.npy".format(str(id)))
-    t_t2c=np.load(log_dir + "/t_t2c_{}.npy".format(str(id)))
-    A=np.load(log_dir + "/A_rect_l_{}.npy".format(str(id)))
+    r_t2c = np.load(log_dir + "/r_t2c_{}.npy".format(str(id)))
+    t_t2c = np.load(log_dir + "/t_t2c_{}.npy".format(str(id)))
+    A = np.load(log_dir + "/A_rect_l_{}.npy".format(str(id)))
     gray = cv2.cvtColor(img_l, cv2.COLOR_BGR2GRAY)
     tags = at_detector.detect(gray, False, camera_params=None)
     for tag in tags:
@@ -339,7 +329,6 @@ def check_accuracy(log_dir):
                         fontScale=0.5,
                         color=(255, 0, 0))
         cv2_imshow(img_l, window_name="left image + Apriltag detections")
-
         H_t2c = np.vstack((np.hstack((cv2.Rodrigues(r_t2c[0])[0], t_t2c[0])), np.array([0, 0, 0, 1])))
         t_c2t = -np.matrix(cv2.Rodrigues(r_t2c[0])[0]).T * np.matrix(t_t2c[0])
         R_c2t = np.matrix(cv2.Rodrigues(r_t2c[0])[0]).T
@@ -348,7 +337,7 @@ def check_accuracy(log_dir):
         err_all_c = []
         err_all_t = []
         # for idx_tag in range(4):
-        idx_tag=3
+        idx_tag = 3
         u, v = tag.corners[idx_tag]
         u = int(u)
         v = int(v)
@@ -357,7 +346,7 @@ def check_accuracy(log_dir):
         Y = Z * (v - A[3]) / A[1]
         P_c = np.array([X, Y, Z, 1])
         # manually measure
-        P_t = np.append(np.array([10.5*50-30.5+4.8+0.5,-4.5*50-15,-25+76.4+4.8]), 1)
+        P_t = np.append(np.array([10.5 * 50 - 30.5 + 4.8 + 0.5, -4.5 * 50 - 15, -25 + 76.4 + 4.8]), 1)
         P_c_hat = np.matrix(H_t2c) * np.matrix(P_t.reshape(4, 1))
         # P_c_hat = H_t2c @ P_t.reshape(4,1)
         P_t_hat = np.matrix(H_c2t) * np.matrix(P_c.reshape(4, 1))
@@ -374,9 +363,79 @@ def check_accuracy(log_dir):
         print("mean err_all_t[mm]", np.mean(err_all_t))
         print("ended.")
 
-if __name__ == '__main__':
 
-    log_dir = "/home/user/code/zed-sdk/mahdi/log/hand_to_eye_calibration/two_t_on_table"
+class ROSserver:
+    def __init__(self):
+        self.img_gray = None
+        self.t = 0
+        self.t0 = 0
+        self.helper_index = 0
+        self.id = 0
+
+    def gotdata(self, color_image, depth_map, depth_confidence_map, camera_info):
+        N=50 #total number of images to save
+        if self.id < N:
+            if self.helper_index == 0:
+                print("+++++++++++++++++++++++++++")
+                self.t0 = color_image.header.stamp.secs + color_image.header.stamp.nsecs / 10 ** 9
+                np.save(log_dir + "/t0.npy", self.t0)
+                self.helper_index += 1
+                fx = camera_info.K[0]
+                fy = camera_info.K[4]
+                cx = camera_info.K[2]
+                cy = camera_info.K[5]
+                self.A = np.array([[fx, 0, cx], [0, fy, cy], [0, 0, 1]])
+            if np.sum(self.A != np.array([[camera_info.K[0], 0, camera_info.K[2]], [0, camera_info.K[4], camera_info.K[5]], [0, 0, 1]]))>0:
+                raise ("error: intrinsic camera matrix changed!")
+            # print("t-t0[ms]=", (color_image.header.stamp.secs+color_image.header.stamp.nsecs/10**9 - self.t0)*1000)
+            print("dt[ms]=", (color_image.header.stamp.secs + color_image.header.stamp.nsecs / 10 ** 9 - self.t) * 1000)
+            self.t = color_image.header.stamp.secs + color_image.header.stamp.nsecs / 10 ** 9
+            print("timestamp_color_image={} [s]".format(
+                color_image.header.stamp.secs + color_image.header.stamp.nsecs / 10 ** 9))
+            print("timestamp_depth_map={} [s]".format(
+                depth_map.header.stamp.secs + depth_map.header.stamp.nsecs / 10 ** 9))
+            print("timestamp_depth_confidence_map={} [s]".format(
+                depth_confidence_map.header.stamp.secs + depth_confidence_map.header.stamp.nsecs / 10 ** 9))
+            color_image = CvBridge().imgmsg_to_cv2(color_image, desired_encoding='passthrough')
+            depth_map = np.array(CvBridge().imgmsg_to_cv2(depth_map, desired_encoding='passthrough'), dtype=np.float32)
+            depth_confidence_map = np.array(
+                CvBridge().imgmsg_to_cv2(depth_confidence_map, desired_encoding='passthrough'), dtype=np.float32)
+            np.save(log_dir + "/color_image_{}.npy".format(str(self.id)), color_image)
+            cv2.imwrite(log_dir + "/color_image_{}.png".format(str(self.id)), color_image)
+            np.save(log_dir + "/depth_map_{}.npy".format(str(self.id)), depth_map)
+            cv2.imwrite(log_dir + "/depth_map_{}.png".format(str(self.id)), depth_map)
+            np.save(log_dir + "/depth_confidence_map_{}.npy".format(str(self.id)), depth_confidence_map)
+            cv2.imwrite(log_dir + "/depth_confidence_map_{}.png".format(str(self.id)), depth_confidence_map)
+            np.save(log_dir + "/time_stamp_{}.npy".format(str(self.id)), self.t)
+            print("self.id=", self.id)
+        self.id += 1
+
+
+def get_timestamped_ros_data(log_dir):
+    rospy.init_node('my_node')
+    server = ROSserver()
+    color_image_listener = message_filters.Subscriber('/zedxm/zed_node/rgb/image_rect_color', Image)
+    depth_map_listener = message_filters.Subscriber('/zedxm/zed_node/depth/depth_registered', Image)
+    camera_info_listener = message_filters.Subscriber('/zedxm/zed_node/depth/camera_info', CameraInfo)
+    depth_confidence_map_listener = message_filters.Subscriber('/zedxm/zed_node/confidence/confidence_map', Image)
+    ts = message_filters.ApproximateTimeSynchronizer(
+        [color_image_listener, depth_map_listener, depth_confidence_map_listener, camera_info_listener],
+        5,
+        0.01)  # slop parameter in the constructor that defines the delay (in seconds) with which messages can be synchronized.
+    ts.registerCallback(server.gotdata)
+    # rate = rospy.Rate(1)  # 10hz
+    # while not rospy.is_shutdown():
+    #     rate.sleep()
+    rospy.spin()
+    np.save(log_dir + "/A.npy", server.A)
+
+
+# def approximate_speed(log_dir):
+
+
+if __name__ == '__main__':
+    log_dir = "/home/user/code/zed-sdk/mahdi/log/hand_to_eye_calibration/two_t_on_table/validation/speed_1"
     # save_calib_data(log_dir)
     # hand_to_eye_calib(log_dir)
-    check_accuracy(log_dir)
+    # check_accuracy(log_dir)
+    get_timestamped_ros_data(log_dir)
