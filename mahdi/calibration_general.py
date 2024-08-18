@@ -438,7 +438,7 @@ def approximate_speed(log_dir):
     # load calibration data
     r_t2c = np.load("/home/user/code/zed-sdk/mahdi/log/hand_to_eye_calibration/two_t_on_table/r_t2c_1.npy")
     t_t2c = np.load("/home/user/code/zed-sdk/mahdi/log/hand_to_eye_calibration/two_t_on_table/t_t2c_1.npy")
-    A = np.load(log_dir + "/A_rect_l_{}.npy".format(str(id)))
+    A = np.load(log_dir + "/A.npy")
     gray = cv2.cvtColor(img_l, cv2.COLOR_BGR2GRAY)
     at_detector = Detector(searchpath=['apriltags'],
                            families='tag36h11',
@@ -485,9 +485,9 @@ def approximate_speed(log_dir):
         u, v = tag.corners[idx_tag]
         u = int(u)
         v = int(v)
-        Z = np.nanmean(depth_l[v - 2: v + 2, u - 2: u + 2])
-        X = Z * (u - A[2]) / A[0]
-        Y = Z * (v - A[3]) / A[1]
+        Z = np.nanmean(depth_l[v - 2: v + 2, u - 2: u + 2])*1000
+        X = Z * (u - A[0,2]) / A[0,0]
+        Y = Z * (v - A[1,2]) / A[1,1]
         P_c = np.array([X, Y, Z, 1])
         # manually measure
         P_t = np.append(np.array([10.5 * 50 - 30.5 + 4.8 + 0.5, -4.5 * 50 - 15, -25 + 76.4 + 4.8]), 1)
@@ -512,5 +512,5 @@ if __name__ == '__main__':
     # save_calib_data(log_dir)
     # hand_to_eye_calib(log_dir)
     # check_accuracy(log_dir)
-    get_timestamped_ros_data(log_dir)
-    # approximate_speed(log_dir)
+    # get_timestamped_ros_data(log_dir)
+    approximate_speed(log_dir)
