@@ -373,10 +373,10 @@ class ROSserver:
         self.id = 0
 
     def gotdata(self, color_image, depth_map, depth_confidence_map, camera_info):
-        N=50 #total number of images to save
+        N=252 #total number of images to save
         if self.id < N:
             if self.helper_index == 0:
-                print("+++++++++++++++++++++++++++")
+                # print("+++++++++++++++++++++++++++")
                 self.t0 = color_image.header.stamp.secs + color_image.header.stamp.nsecs / 10 ** 9
                 np.save(log_dir + "/t0.npy", self.t0)
                 self.helper_index += 1
@@ -385,17 +385,18 @@ class ROSserver:
                 cx = camera_info.K[2]
                 cy = camera_info.K[5]
                 self.A = np.array([[fx, 0, cx], [0, fy, cy], [0, 0, 1]])
+                np.save(log_dir + "/A.npy", self.A)
             if np.sum(self.A != np.array([[camera_info.K[0], 0, camera_info.K[2]], [0, camera_info.K[4], camera_info.K[5]], [0, 0, 1]]))>0:
                 raise ("error: intrinsic camera matrix changed!")
             # print("t-t0[ms]=", (color_image.header.stamp.secs+color_image.header.stamp.nsecs/10**9 - self.t0)*1000)
             print("dt[ms]=", (color_image.header.stamp.secs + color_image.header.stamp.nsecs / 10 ** 9 - self.t) * 1000)
             self.t = color_image.header.stamp.secs + color_image.header.stamp.nsecs / 10 ** 9
-            print("timestamp_color_image={} [s]".format(
-                color_image.header.stamp.secs + color_image.header.stamp.nsecs / 10 ** 9))
-            print("timestamp_depth_map={} [s]".format(
-                depth_map.header.stamp.secs + depth_map.header.stamp.nsecs / 10 ** 9))
-            print("timestamp_depth_confidence_map={} [s]".format(
-                depth_confidence_map.header.stamp.secs + depth_confidence_map.header.stamp.nsecs / 10 ** 9))
+            # print("timestamp_color_image={} [s]".format(
+            #     color_image.header.stamp.secs + color_image.header.stamp.nsecs / 10 ** 9))
+            # print("timestamp_depth_map={} [s]".format(
+            #     depth_map.header.stamp.secs + depth_map.header.stamp.nsecs / 10 ** 9))
+            # print("timestamp_depth_confidence_map={} [s]".format(
+            #     depth_confidence_map.header.stamp.secs + depth_confidence_map.header.stamp.nsecs / 10 ** 9))
             color_image = CvBridge().imgmsg_to_cv2(color_image, desired_encoding='passthrough')
             depth_map = np.array(CvBridge().imgmsg_to_cv2(depth_map, desired_encoding='passthrough'), dtype=np.float32)
             depth_confidence_map = np.array(
@@ -427,11 +428,84 @@ def get_timestamped_ros_data(log_dir):
     # while not rospy.is_shutdown():
     #     rate.sleep()
     rospy.spin()
-    np.save(log_dir + "/A.npy", server.A)
 
 
-# def approximate_speed(log_dir):
+def approximate_speed(log_dir):
+    id=0
+    img_l=np.load(log_dir + "/color_image_{}.npy".format(str(id)))
+    depth_l=np.load(log_dir + "/depth_map_{}.npy".format(str(id)))
 
+    # load calibration data
+    r_t2c = np.load("/home/user/code/zed-sdk/mahdi/log/hand_to_eye_calibration/two_t_on_table/r_t2c_1.npy")
+    t_t2c = np.load("/home/user/code/zed-sdk/mahdi/log/hand_to_eye_calibration/two_t_on_table/t_t2c_1.npy")
+    A = np.load(log_dir + "/A_rect_l_{}.npy".format(str(id)))
+    gray = cv2.cvtColor(img_l, cv2.COLOR_BGR2GRAY)
+    at_detector = Detector(searchpath=['apriltags'],
+                           families='tag36h11',
+                           nthreads=1,
+                           quad_decimate=1.0,
+                           quad_sigma=0.0,
+                           refine_edges=1,
+                           decode_sharpening=0.25,
+                           debug=0)
+    tags = at_detector.detect(gray, False, camera_params=None)
+    for tag in tags:
+        for idx in range(len(tag.corners)):
+            # print(
+            #     "!!corner detected on image plane location = ({},{}) [pxls].".format(
+            #         tag.corners[idx, 0], tag.corners[idx, 1]))
+            cv2.line(img_l, tuple(tag.corners[idx - 1, :].astype(int)),
+                     tuple(tag.corners[idx, :].astype(int)),
+                     (0, 255, 0))
+            cv2.drawMarker(img_l, tuple(tag.corners[idx, :].astype(int)), color=(255, 0, 0))
+            cv2.putText(img_l, str(idx),
+                        org=(tag.corners[idx, 0].astype(int) + 3, tag.corners[idx, 1].astype(int) + 3),
+                        fontFace=cv2.FONT_HERSHEY_SIMPLEX,
+                        fontScale=0.5,
+                        color=(255, 0, 0))
+            cv2.line(img_l, tuple(tag.corners[idx - 1, :].astype(int)),
+                     tuple(tag.corners[idx, :].astype(int)),
+                     (0, 255, 0))
+            cv2.drawMarker(img_l, tuple(tag.corners[idx, :].astype(int)), color=(255, 0, 0))
+            cv2.putText(img_l, str(idx),
+                        org=(tag.corners[idx, 0].astype(int) + 3, tag.corners[idx, 1].astype(int) + 3),
+                        fontFace=cv2.FONT_HERSHEY_SIMPLEX,
+                        fontScale=0.5,
+                        color=(255, 0, 0))
+        cv2_imshow(img_l, window_name="left image + Apriltag detections")
+        H_t2c = np.vstack((np.hstack((cv2.Rodrigues(r_t2c[0])[0], t_t2c[0])), np.array([0, 0, 0, 1])))
+        t_c2t = -np.matrix(cv2.Rodrigues(r_t2c[0])[0]).T * np.matrix(t_t2c[0])
+        R_c2t = np.matrix(cv2.Rodrigues(r_t2c[0])[0]).T
+        H_c2t = np.vstack((np.hstack((R_c2t, t_c2t.reshape(3, 1))),
+                           np.array([0, 0, 0, 1])))
+        err_all_c = []
+        err_all_t = []
+        # for idx_tag in range(4):
+        idx_tag = 3
+        u, v = tag.corners[idx_tag]
+        u = int(u)
+        v = int(v)
+        Z = np.nanmean(depth_l[v - 2: v + 2, u - 2: u + 2])
+        X = Z * (u - A[2]) / A[0]
+        Y = Z * (v - A[3]) / A[1]
+        P_c = np.array([X, Y, Z, 1])
+        # manually measure
+        P_t = np.append(np.array([10.5 * 50 - 30.5 + 4.8 + 0.5, -4.5 * 50 - 15, -25 + 76.4 + 4.8]), 1)
+        P_c_hat = np.matrix(H_t2c) * np.matrix(P_t.reshape(4, 1))
+        # P_c_hat = H_t2c @ P_t.reshape(4,1)
+        P_t_hat = np.matrix(H_c2t) * np.matrix(P_c.reshape(4, 1))
+        err_c = P_c_hat[:3] - P_c[:3].reshape(3, 1)
+        err_t = P_t_hat[:3] - P_t[:3].reshape(3, 1)
+        print("idx_tag={}\n".format(idx_tag))
+        print("err_c[mm]=", err_c)
+        print("norm(err_c)[mm]=", np.linalg.norm(err_c))
+        err_all_c.append(np.linalg.norm(err_c))
+        print("err_t[mm]=", err_t)
+        print("norm(err_t)[mm]=", np.linalg.norm(err_t))
+        err_all_t.append(np.linalg.norm(err_t))
+        print("mean err_all_c[mm]", np.mean(err_all_c))
+        print("mean err_all_t[mm]", np.mean(err_all_t))
+        print("ended.")
 
 if __name__ == '__main__':
     log_dir = "/home/user/code/zed-sdk/mahdi/log/hand_to_eye_calibration/two_t_on_table/validation/speed_1"
@@ -439,3 +513,4 @@ if __name__ == '__main__':
     # hand_to_eye_calib(log_dir)
     # check_accuracy(log_dir)
     get_timestamped_ros_data(log_dir)
+    # approximate_speed(log_dir)
