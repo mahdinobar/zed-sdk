@@ -15,6 +15,7 @@ import rospy
 from sensor_msgs.msg import Image, CameraInfo
 import message_filters
 from cv_bridge import CvBridge
+import matplotlib.pyplot as plt
 
 
 def cv2_imshow(a, window_name="image"):
@@ -34,7 +35,7 @@ def cv2_imshow(a, window_name="image"):
     if a.ndim == 2:
         a = a.clip(100, 500).astype('uint8')
     cv2.imshow(window_name, a)
-    cv2.waitKey(0)
+    cv2.waitKey(500)
     cv2.destroyAllWindows()
 
 
@@ -373,7 +374,7 @@ class ROSserver:
         self.id = 0
 
     def gotdata(self, color_image, depth_map, depth_confidence_map, camera_info):
-        N=252 #total number of images to save
+        N = 252  # total number of images to save
         if self.id < N:
             if self.helper_index == 0:
                 # print("+++++++++++++++++++++++++++")
@@ -386,7 +387,8 @@ class ROSserver:
                 cy = camera_info.K[5]
                 self.A = np.array([[fx, 0, cx], [0, fy, cy], [0, 0, 1]])
                 np.save(log_dir + "/A.npy", self.A)
-            if np.sum(self.A != np.array([[camera_info.K[0], 0, camera_info.K[2]], [0, camera_info.K[4], camera_info.K[5]], [0, 0, 1]]))>0:
+            if np.sum(self.A != np.array(
+                    [[camera_info.K[0], 0, camera_info.K[2]], [0, camera_info.K[4], camera_info.K[5]], [0, 0, 1]])) > 0:
                 raise ("error: intrinsic camera matrix changed!")
             # print("t-t0[ms]=", (color_image.header.stamp.secs+color_image.header.stamp.nsecs/10**9 - self.t0)*1000)
             print("dt[ms]=", (color_image.header.stamp.secs + color_image.header.stamp.nsecs / 10 ** 9 - self.t) * 1000)
@@ -431,81 +433,168 @@ def get_timestamped_ros_data(log_dir):
 
 
 def approximate_speed(log_dir):
-    id=0
-    img_l=np.load(log_dir + "/color_image_{}.npy".format(str(id)))
-    depth_l=np.load(log_dir + "/depth_map_{}.npy".format(str(id)))
+    N = 250
+    P_c_all = []
+    P_t_hat_all = []
+    P_t_gt_all = np.zeros((N, 4))
+    time_stamp_all = np.zeros(N)
+    for id in range(0, N):
+        img_l = np.load(log_dir + "/color_image_{}.npy".format(str(id)))
+        time_stamp = np.load(log_dir + "/time_stamp_{}.npy".format(str(id)))
+        depth_l = np.load(log_dir + "/depth_map_{}.npy".format(str(id)))
 
-    # load calibration data
-    r_t2c = np.load("/home/user/code/zed-sdk/mahdi/log/hand_to_eye_calibration/two_t_on_table/r_t2c_1.npy")
-    t_t2c = np.load("/home/user/code/zed-sdk/mahdi/log/hand_to_eye_calibration/two_t_on_table/t_t2c_1.npy")
-    A = np.load(log_dir + "/A.npy")
-    gray = cv2.cvtColor(img_l, cv2.COLOR_BGR2GRAY)
-    at_detector = Detector(searchpath=['apriltags'],
-                           families='tag36h11',
-                           nthreads=1,
-                           quad_decimate=1.0,
-                           quad_sigma=0.0,
-                           refine_edges=1,
-                           decode_sharpening=0.25,
-                           debug=0)
-    tags = at_detector.detect(gray, False, camera_params=None)
-    for tag in tags:
-        for idx in range(len(tag.corners)):
-            # print(
-            #     "!!corner detected on image plane location = ({},{}) [pxls].".format(
-            #         tag.corners[idx, 0], tag.corners[idx, 1]))
-            cv2.line(img_l, tuple(tag.corners[idx - 1, :].astype(int)),
-                     tuple(tag.corners[idx, :].astype(int)),
-                     (0, 255, 0))
-            cv2.drawMarker(img_l, tuple(tag.corners[idx, :].astype(int)), color=(255, 0, 0))
-            cv2.putText(img_l, str(idx),
-                        org=(tag.corners[idx, 0].astype(int) + 3, tag.corners[idx, 1].astype(int) + 3),
-                        fontFace=cv2.FONT_HERSHEY_SIMPLEX,
-                        fontScale=0.5,
-                        color=(255, 0, 0))
-            cv2.line(img_l, tuple(tag.corners[idx - 1, :].astype(int)),
-                     tuple(tag.corners[idx, :].astype(int)),
-                     (0, 255, 0))
-            cv2.drawMarker(img_l, tuple(tag.corners[idx, :].astype(int)), color=(255, 0, 0))
-            cv2.putText(img_l, str(idx),
-                        org=(tag.corners[idx, 0].astype(int) + 3, tag.corners[idx, 1].astype(int) + 3),
-                        fontFace=cv2.FONT_HERSHEY_SIMPLEX,
-                        fontScale=0.5,
-                        color=(255, 0, 0))
-        cv2_imshow(img_l, window_name="left image + Apriltag detections")
-        H_t2c = np.vstack((np.hstack((cv2.Rodrigues(r_t2c[0])[0], t_t2c[0])), np.array([0, 0, 0, 1])))
+        # load calibration data
+        r_t2c = np.load("/home/user/code/zed-sdk/mahdi/log/hand_to_eye_calibration/two_t_on_table/r_t2c_1.npy")
+        t_t2c = np.load("/home/user/code/zed-sdk/mahdi/log/hand_to_eye_calibration/two_t_on_table/t_t2c_1.npy")
+        A = np.load(log_dir + "/A.npy")
+        gray = cv2.cvtColor(img_l, cv2.COLOR_BGR2GRAY)
+        at_detector = Detector(searchpath=['apriltags'],
+                               families='tag36h11',
+                               nthreads=1,
+                               quad_decimate=1.0,
+                               quad_sigma=0.0,
+                               refine_edges=1,
+                               decode_sharpening=0.25,
+                               debug=0)
+        tags = at_detector.detect(gray, False, camera_params=None)
+        # for tag in tags:
+        tag = tags[0]
+        if False:
+            for idx in range(len(tag.corners)):
+                # print(
+                #     "!!corner detected on image plane location = ({},{}) [pxls].".format(
+                #         tag.corners[idx, 0], tag.corners[idx, 1]))
+                cv2.line(img_l, tuple(tag.corners[idx - 1, :].astype(int)),
+                         tuple(tag.corners[idx, :].astype(int)),
+                         (0, 255, 0))
+                cv2.drawMarker(img_l, tuple(tag.corners[idx, :].astype(int)), color=(255, 0, 0))
+                cv2.putText(img_l, str(idx),
+                            org=(tag.corners[idx, 0].astype(int) + 3, tag.corners[idx, 1].astype(int) + 3),
+                            fontFace=cv2.FONT_HERSHEY_SIMPLEX,
+                            fontScale=0.5,
+                            color=(255, 0, 0))
+                cv2.line(img_l, tuple(tag.corners[idx - 1, :].astype(int)),
+                         tuple(tag.corners[idx, :].astype(int)),
+                         (0, 255, 0))
+                cv2.drawMarker(img_l, tuple(tag.corners[idx, :].astype(int)), color=(255, 0, 0))
+                cv2.putText(img_l, str(idx),
+                            org=(tag.corners[idx, 0].astype(int) + 3, tag.corners[idx, 1].astype(int) + 3),
+                            fontFace=cv2.FONT_HERSHEY_SIMPLEX,
+                            fontScale=0.5,
+                            color=(255, 0, 0))
+            cv2_imshow(img_l, window_name="left image + Apriltag detections id={}".format(str(id)))
+        # H_t2c = np.vstack((np.hstack((cv2.Rodrigues(r_t2c[0])[0], t_t2c[0])), np.array([0, 0, 0, 1])))
         t_c2t = -np.matrix(cv2.Rodrigues(r_t2c[0])[0]).T * np.matrix(t_t2c[0])
         R_c2t = np.matrix(cv2.Rodrigues(r_t2c[0])[0]).T
         H_c2t = np.vstack((np.hstack((R_c2t, t_c2t.reshape(3, 1))),
                            np.array([0, 0, 0, 1])))
-        err_all_c = []
-        err_all_t = []
+        # err_all_c = []
+        # err_all_t = []
         # for idx_tag in range(4):
         idx_tag = 3
         u, v = tag.corners[idx_tag]
         u = int(u)
         v = int(v)
-        Z = np.nanmean(depth_l[v - 2: v + 2, u - 2: u + 2])*1000
-        X = Z * (u - A[0,2]) / A[0,0]
-        Y = Z * (v - A[1,2]) / A[1,1]
-        P_c = np.array([X, Y, Z, 1])
-        # manually measure
-        P_t = np.append(np.array([10.5 * 50 - 30.5 + 4.8 + 0.5, -4.5 * 50 - 15, -25 + 76.4 + 4.8]), 1)
-        P_c_hat = np.matrix(H_t2c) * np.matrix(P_t.reshape(4, 1))
-        # P_c_hat = H_t2c @ P_t.reshape(4,1)
-        P_t_hat = np.matrix(H_c2t) * np.matrix(P_c.reshape(4, 1))
-        err_c = P_c_hat[:3] - P_c[:3].reshape(3, 1)
-        err_t = P_t_hat[:3] - P_t[:3].reshape(3, 1)
-        print("idx_tag={}\n".format(idx_tag))
-        print("err_c[mm]=", err_c)
-        print("norm(err_c)[mm]=", np.linalg.norm(err_c))
-        err_all_c.append(np.linalg.norm(err_c))
-        print("err_t[mm]=", err_t)
-        print("norm(err_t)[mm]=", np.linalg.norm(err_t))
-        err_all_t.append(np.linalg.norm(err_t))
-        print("mean err_all_c[mm]", np.mean(err_all_c))
-        print("mean err_all_t[mm]", np.mean(err_all_t))
-        print("ended.")
+        Z = np.nanmean(depth_l[v - 2: v + 2, u - 2: u + 2]) * 1000
+        X = Z * (u - A[0, 2]) / A[0, 0]
+        Y = Z * (v - A[1, 2]) / A[1, 1]
+        P_c_hat = np.array([X, Y, Z, 1])
+        P_c_all = np.hstack((P_c_all, P_c_hat))
+        time_stamp_all[id] = time_stamp
+        # # manually measure
+        # P_t = np.append(np.array([10.5 * 50 - 30.5 + 4.8 + 0.5, -4.5 * 50 - 15, -25 + 76.4 + 4.8]), 1)
+        # P_c_hat = np.matrix(H_t2c) * np.matrix(P_t.reshape(4, 1))
+        # # P_c_hat = H_t2c @ P_t.reshape(4,1)
+        P_t_hat = np.matrix(H_c2t) * np.matrix(P_c_hat.reshape(4, 1))
+        P_t_hat_all = np.hstack((P_t_hat_all, np.asarray(P_t_hat).squeeze()))
+
+        # err_c = P_c_hat[:3] - P_c[:3].reshape(3, 1)
+        # err_t = P_t_hat[:3] - P_t[:3].reshape(3, 1)
+        # print("idx_tag={}\n".format(idx_tag))
+        # print("err_c[mm]=", err_c)
+        # print("norm(err_c)[mm]=", np.linalg.norm(err_c))
+        # err_all_c.append(np.linalg.norm(err_c))
+        # print("err_t[mm]=", err_t)
+        # print("norm(err_t)[mm]=", np.linalg.norm(err_t))
+        # err_all_t.append(np.linalg.norm(err_t))
+        # print("mean err_all_c[mm]", np.mean(err_all_c))
+        # print("mean err_all_t[mm]", np.mean(err_all_t))
+    P_c_all = P_c_all.reshape(N, 4)
+    P_t_hat_all = P_t_hat_all.reshape(N, 4)
+    dt = np.diff(time_stamp_all, n=1, axis=-1) * 1000
+    t = (time_stamp_all - time_stamp_all[0]) * 1000
+    dPc = np.diff(P_c_all, n=1, axis=0)
+    norm_dPc = np.linalg.norm(dPc[:, :3], axis=1)
+
+    plt.figure(figsize=(8, 12))
+    plt.subplot(411)
+    plt.plot(t[:-1] / 1000, norm_dPc, '-bo')
+    plt.ylabel("norm dPc [mm]")
+    plt.subplot(412)
+    plt.plot(t[:-1] / 1000, dPc[:, 0], '-bo')
+    plt.ylabel("dPc[0] [mm]")
+    plt.subplot(413)
+    plt.plot(t[:-1] / 1000, dPc[:, 1], '-bo')
+    plt.ylabel("dPc[1] [mm]")
+    plt.subplot(414)
+    plt.plot(t[:-1] / 1000, dPc[:, 2], '-bo')
+    plt.ylabel("dPc[2] [mm]")
+    plt.xlabel("time [s]")
+    plt.savefig(log_dir+"/dPc.png",format="png")
+    plt.show()
+
+    P_t_gt_0_measured = np.array([506.2, -341.3, 50.8])
+    bias = np.array(
+        [np.nanmean(P_t_hat_all[:, 0]) - P_t_gt_0_measured[0], np.nanmean(P_t_hat_all[:20, 1]) - P_t_gt_0_measured[1], np.nanmean(P_t_hat_all[:, 2]) - P_t_gt_0_measured[2]])
+    P_t_gt_0=P_t_gt_0_measured+bias
+    P_t_gt_all = np.zeros((N, 3)) + P_t_gt_0
+    P_t_gt_all[:, 1] += np.linalg.norm(P_c_all[:,:3], axis=1) - np.linalg.norm(P_c_all[:,:3], axis=1)[0]
+    plt.figure(figsize=(8, 12))
+    # fig.suptitle('speed_1', fontsize=10)
+    plt.subplot(411)
+    plt.title("speed_1")
+    plt.plot(t / 1000, np.linalg.norm(P_t_hat_all[:, :3] - P_t_gt_all, axis=1), '-ko')
+    plt.ylabel("norm Pt_hat-Pt_gt [mm]")
+    plt.xlim([0,25])
+    plt.subplot(412)
+    plt.plot(t / 1000, P_t_hat_all[:, 0], '-bo', label="Pt_hat")
+    plt.plot(t / 1000, P_t_gt_all[:, 0], '-ro', label="Pt_gt")
+    plt.ylabel("Pt[0] [mm]")
+    plt.xlim([0, 25])
+    plt.subplot(413)
+    plt.plot(t / 1000, P_t_hat_all[:, 1], '-bo', label="Pt_hat")
+    plt.plot(t / 1000, P_t_gt_all[:, 1], '-ro', label="Pt_gt")
+    plt.ylabel("Pt[1] [mm]")
+    plt.xlim([0, 25])
+    plt.subplot(414)
+    plt.plot(t / 1000, P_t_hat_all[:, 2], '-bo', label="Pt_hat")
+    plt.plot(t / 1000, P_t_gt_all[:, 2], '-ro', label="Pt_gt")
+    plt.ylabel("Pt[2] [mm]")
+    plt.xlabel("time [s]")
+    plt.xlim([0, 25])
+    plt.legend(loc="upper right")
+    plt.savefig(log_dir+"/Pt.png",format="png")
+    plt.show()
+
+    plt.figure(figsize=(8, 12))
+    plt.subplot(411)
+    plt.plot(t[:-1] / 1000, norm_dPc / dt * 1000, '-bo')
+    plt.ylabel("norm dPc/dt [mm/s]")
+    plt.subplot(412)
+    plt.plot(t[:-1] / 1000, dPc[:, 0] / dt * 1000, '-bo')
+    plt.ylabel("dPc[0]/dt [mm/s]")
+    plt.subplot(413)
+    plt.plot(t[:-1] / 1000, dPc[:, 1] / dt * 1000, '-bo')
+    plt.ylabel("dPc[1]/dt [mm/s]")
+    plt.subplot(414)
+    plt.plot(t[:-1] / 1000, dPc[:, 2] / dt * 1000, '-bo')
+    plt.ylabel("dPc[2] [mm/s]")
+    plt.xlabel("time [s]")
+    plt.savefig(log_dir+"/speed_est_camera.png",format="png")
+    plt.show()
+
+    print("ended.")
+
 
 if __name__ == '__main__':
     log_dir = "/home/user/code/zed-sdk/mahdi/log/hand_to_eye_calibration/two_t_on_table/validation/speed_1"
