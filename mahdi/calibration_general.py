@@ -542,11 +542,11 @@ class fast_ROSserver:
         self.id += 1
         #print("6[ms]", (time.time() - t) * 1000)
         #t = time.time()
-        if self.id == 120:
+        if self.id == 160:
             print("self.id=", self.id)
-            np.save(log_dir+"/tVec_s1.npy",self.tVec)
-            np.save(log_dir+"/P_c_hat_s1.npy",self.P_c_hat)
-            np.save(log_dir+"/conf_Z_s1.npy",self.conf_Z)
+            np.save(log_dir+"/tVec_s3.npy",self.tVec)
+            np.save(log_dir+"/P_c_hat_s3.npy",self.P_c_hat)
+            np.save(log_dir+"/conf_Z_s3.npy",self.conf_Z)
             exit()
         #     print("self.t=", self.tVec)
         #     print("dt[ms]=", np.diff(self.tVec[1:]) * 1000)
@@ -752,7 +752,7 @@ def calc_results(log_dir):
 
 
 if __name__ == '__main__':
-    log_dir = "/home/user/code/zed-sdk/mahdi/log/hand_to_eye_calibration/two_t_on_table/30_fps_speed_1"
+    log_dir = "/home/user/code/zed-sdk/mahdi/log/hand_to_eye_calibration/two_t_on_table/measurements"
     # save_calib_data(log_dir)
     # hand_to_eye_calib(log_dir)
     # check_accuracy(log_dir)
