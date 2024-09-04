@@ -544,9 +544,9 @@ class fast_ROSserver:
         #t = time.time()
         if self.id == 120:
             print("self.id=", self.id)
-            np.save(log_dir+"/tVec.npy",self.tVec)
-            np.save(log_dir+"/P_c_hat.npy",self.P_c_hat)
-            np.save(log_dir+"/conf_Z.npy",self.conf_Z)
+            np.save(log_dir+"/tVec_s1.npy",self.tVec)
+            np.save(log_dir+"/P_c_hat_s1.npy",self.P_c_hat)
+            np.save(log_dir+"/conf_Z_s1.npy",self.conf_Z)
             exit()
         #     print("self.t=", self.tVec)
         #     print("dt[ms]=", np.diff(self.tVec[1:]) * 1000)
