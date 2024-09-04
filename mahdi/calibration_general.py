@@ -17,6 +17,8 @@ import message_filters
 from cv_bridge import CvBridge
 import matplotlib.pyplot as plt
 from geometry_msgs.msg import Vector3Stamped
+import time
+
 
 def cv2_imshow(a, window_name="image"):
     """A replacement for cv2.imshow() for use in Jupyter notebooks.
@@ -392,7 +394,7 @@ class ROSserver:
                 cy = camera_info.K[5]
                 self.A = np.array([[fx, 0, cx], [0, fy, cy], [0, 0, 1]])
                 np.save(log_dir + "/A.npy", self.A)
-            if self.id == 20:#switch on the conveyor after at data 20
+            if self.id == 20:  # switch on the conveyor after at data 20
                 self.myMessage.vector.x = 1
             if np.sum(self.A != np.array(
                     [[camera_info.K[0], 0, camera_info.K[2]], [0, camera_info.K[4], camera_info.K[5]], [0, 0, 1]])) > 0:
@@ -452,6 +454,125 @@ def get_timestamped_ros_data(log_dir):
     # rate = rospy.Rate(1)  # 10hz
     # while not rospy.is_shutdown():
     #     rate.sleep()
+
+
+class fast_ROSserver:
+    def __init__(self):
+
+        self.img_gray = None
+        self.tVec = 0
+        self.helper_index = 0
+        self.id = 0
+        self.A = np.zeros((3, 3))
+        self.at_detector = Detector(searchpath=['apriltags'],
+                                    families='tag36h11',
+                                    nthreads=1,
+                                    quad_decimate=1.0,
+                                    quad_sigma=0.0,
+                                    refine_edges=1,
+                                    decode_sharpening=0.25,
+                                    debug=0)
+        self.corners = np.zeros((1, 4, 2))
+        self.P_c_hat = np.zeros((4, 1))
+        self.conf_Z = 0
+
+        self.myMessage = Vector3Stamped()
+        self.myMessage.vector.x = 0
+        self.myMessage.vector.y = 0
+        self.myMessage.vector.z = 0
+        self.myMessage.header.stamp = rospy.Time.now()
+
+    def gotdata(self, color_image, depth_map, depth_confidence_map, camera_info):
+        # N = 60  # total number of images to save
+        # if self.id < N:
+        ti = time.time()
+        if self.id == 0:
+            # self.t0 = color_image.header.stamp.secs + color_image.header.stamp.nsecs / 10 ** 9
+            # np.save(log_dir + "/t0.npy", self.t0)
+            fx = camera_info.K[0]
+            fy = camera_info.K[4]
+            cx = camera_info.K[2]
+            cy = camera_info.K[5]
+            self.A = np.array([[fx, 0, cx], [0, fy, cy], [0, 0, 1]])
+            # np.save(log_dir + "/A.npy", self.A)
+        if self.id == 10:  # switch on the conveyor after at data 10
+            self.myMessage.vector.x = 1
+        if np.sum(self.A != np.array(
+                [[camera_info.K[0], 0, camera_info.K[2]], [0, camera_info.K[4], camera_info.K[5]], [0, 0, 1]])) > 0:
+            raise ("error: intrinsic camera matrix changed!")
+        self.tVec = np.append(self.tVec, color_image.header.stamp.secs + color_image.header.stamp.nsecs / 10 ** 9)
+        #print("1[ms]", (time.time() - ti) * 1000)
+        #t = time.time()
+        color_image = CvBridge().imgmsg_to_cv2(color_image, desired_encoding='passthrough')
+        # ROI=[[1, 0.5], [1, 1], [0.55, 1], [0.55, 0.5]]
+        u0=int(0.55*1920)
+        v0=int(0.5*1200)
+        color_image=color_image[v0:1200, u0:1920, :]
+        # cv2.imwrite(log_dir + "/color_image.jpeg", color_image)
+        #print("2[ms]", (time.time() - t) * 1000)
+        #t = time.time()
+        # TODO subscribe directly to gray image?
+        gray = cv2.cvtColor(color_image, cv2.COLOR_BGR2GRAY)
+        #print("2gray[ms]", (time.time() - t) * 1000)
+        #t = time.time()
+        # TODO here is time consuming
+        tags = self.at_detector.detect(gray, False, camera_params=None)
+        tag = tags[0]
+        idx_tag = 3
+        u, v = tag.corners[idx_tag]
+        # u,v=[1217.89733887,  720.61071777]
+        u = int(u)+u0
+        v = int(v)+v0
+        #print("3[ms]", (time.time() - t) * 1000)
+        #t = time.time()
+        depth_map = np.array(CvBridge().imgmsg_to_cv2(depth_map, desired_encoding='passthrough'), dtype=np.float32)
+        # A = np.nan_to_num(depth_map, nan=0, posinf=0, neginf=0)*255
+        # cv2.imwrite(log_dir + "/depth_map.jpeg", A)
+        #print("4[ms]", (time.time() - t) * 1000)
+        #t = time.time()
+        Z = np.nanmean(depth_map[v - 2: v + 2, u - 2: u + 2])
+        X = Z * (u - self.A[0, 2]) / self.A[0, 0]
+        Y = Z * (v - self.A[1, 2]) / self.A[1, 1]
+        self.P_c_hat = np.hstack((self.P_c_hat, np.array([[X], [Y], [Z], [1]])))
+        #print("5[ms]", (time.time() - t) * 1000)
+        #t = time.time()
+        depth_confidence_map = np.array(
+            CvBridge().imgmsg_to_cv2(depth_confidence_map, desired_encoding='passthrough'), dtype=np.float32)
+        self.conf_Z = np.append(self.conf_Z, np.nanmean(depth_confidence_map[v - 2: v + 2, u - 2: u + 2]))
+        self.id += 1
+        #print("6[ms]", (time.time() - t) * 1000)
+        #t = time.time()
+        if self.id == 120:
+            print("self.id=", self.id)
+            np.save(log_dir+"/tVec.npy",self.tVec)
+            np.save(log_dir+"/P_c_hat.npy",self.P_c_hat)
+            np.save(log_dir+"/conf_Z.npy",self.conf_Z)
+            exit()
+        #     print("self.t=", self.tVec)
+        #     print("dt[ms]=", np.diff(self.tVec[1:]) * 1000)
+        #print("7[ms]", (time.time() - t) * 1000)
+        #print("8[ms]", (time.time() - ti) * 1000)
+
+
+def fast_get_timestamped_ros_data(log_dir):
+    rospy.init_node('my_node')
+    server = fast_ROSserver()
+    color_image_listener = message_filters.Subscriber('/zedxm/zed_node/rgb/image_rect_color', Image)
+    depth_map_listener = message_filters.Subscriber('/zedxm/zed_node/depth/depth_registered', Image)
+    camera_info_listener = message_filters.Subscriber('/zedxm/zed_node/depth/camera_info', CameraInfo)
+    depth_confidence_map_listener = message_filters.Subscriber('/zedxm/zed_node/confidence/confidence_map', Image)
+    ts = message_filters.ApproximateTimeSynchronizer(
+        [color_image_listener, depth_map_listener, depth_confidence_map_listener, camera_info_listener],
+        5,
+        0.01)  # slop parameter in the constructor that defines the delay (in seconds) with which messages can be synchronized.
+    ts.registerCallback(server.gotdata)
+    topicName = "information"
+    publisher = rospy.Publisher(topicName, Vector3Stamped, queue_size=0)
+    hz = 100
+    rate = rospy.Rate(hz)
+    while not rospy.is_shutdown():
+        publisher.publish(server.myMessage)
+        rate.sleep()
 
 
 def calc_results(log_dir):
@@ -563,19 +684,21 @@ def calc_results(log_dir):
     plt.ylabel("dPc[2] [mm]")
     plt.xlabel("time [s]")
     plt.show()
-    plt.savefig(log_dir+"/dPc.png",format="png")
+    plt.savefig(log_dir + "/dPc.png", format="png")
 
     # P_t_gt_0_measured = np.array([506.5, -342, 77.5])
     # P_t_gt_0_measured = np.array([9.5*50+20-1+11.3+5, -(3.5*50+65+95), 76.8-25+3+5])
-    P_t_gt_0_measured = np.array([9.5 * 50 + 30 + 5 + 0.2 + 4.3, -5.5 * 50 + 5+0.2, 80 - 25 - 1.5 + 14.1])
+    P_t_gt_0_measured = np.array([9.5 * 50 + 30 + 5 + 0.2 + 4.3, -5.5 * 50 + 5 + 0.2, 80 - 25 - 1.5 + 14.1])
     # TODO
-    N_trigger=6
+    N_trigger = 6
     bias = np.array(
-        [np.nanmean(P_t_hat_all[1:, 0]) - P_t_gt_0_measured[0], np.nanmean(P_t_hat_all[1:N_trigger-1, 1]) - P_t_gt_0_measured[1], np.nanmean(P_t_hat_all[1:, 2]) - P_t_gt_0_measured[2]])
+        [np.nanmean(P_t_hat_all[1:, 0]) - P_t_gt_0_measured[0],
+         np.nanmean(P_t_hat_all[1:N_trigger - 1, 1]) - P_t_gt_0_measured[1],
+         np.nanmean(P_t_hat_all[1:, 2]) - P_t_gt_0_measured[2]])
     # bias = np.array([0, 0, 0])
-    P_t_gt_0=P_t_gt_0_measured+bias
+    P_t_gt_0 = P_t_gt_0_measured + bias
     P_t_gt_all = np.zeros((N, 3)) + P_t_gt_0
-    P_t_gt_all[:, 1] += np.linalg.norm(P_c_all[:,:3], axis=1) - np.linalg.norm(P_c_all[:,:3], axis=1)[0]
+    P_t_gt_all[:, 1] += np.linalg.norm(P_c_all[:, :3], axis=1) - np.linalg.norm(P_c_all[:, :3], axis=1)[0]
     # TODO
     # dp=np.diff(time_stamp_all) * 21.64*2
     # for i in range(N_trigger,N):
@@ -602,7 +725,7 @@ def calc_results(log_dir):
     plt.xlabel("time [s]")
     plt.legend(loc="upper right")
     plt.show()
-    plt.savefig(log_dir+"/Pt.png",format="png")
+    plt.savefig(log_dir + "/Pt.png", format="png")
 
     plt.figure(figsize=(8, 12))
     plt.subplot(411)
@@ -619,7 +742,7 @@ def calc_results(log_dir):
     plt.ylabel("dPc[2] [mm/s]")
     plt.xlabel("time [s]")
     plt.show()
-    plt.savefig(log_dir+"/speed_est_camera.png",format="png")
+    plt.savefig(log_dir + "/speed_est_camera.png", format="png")
 
     np.save(log_dir + "/P_t_gt_0_measured.npy", P_t_gt_0_measured)
     np.save(log_dir + "/P_t_gt_all.npy", P_t_gt_all)
@@ -629,9 +752,10 @@ def calc_results(log_dir):
 
 
 if __name__ == '__main__':
-    log_dir = "/home/user/code/zed-sdk/mahdi/log/hand_to_eye_calibration/two_t_on_table/validation/test_3"
+    log_dir = "/home/user/code/zed-sdk/mahdi/log/hand_to_eye_calibration/two_t_on_table/30_fps_speed_1"
     # save_calib_data(log_dir)
     # hand_to_eye_calib(log_dir)
     # check_accuracy(log_dir)
     # get_timestamped_ros_data(log_dir)
+    fast_get_timestamped_ros_data(log_dir)
     # calc_results(log_dir)
