@@ -18,6 +18,7 @@ from cv_bridge import CvBridge
 import matplotlib.pyplot as plt
 from geometry_msgs.msg import Vector3Stamped
 import time
+from geometry_msgs.msg import Vector3Stamped
 
 
 def cv2_imshow(a, window_name="image"):
@@ -501,57 +502,57 @@ class fast_ROSserver:
                 [[camera_info.K[0], 0, camera_info.K[2]], [0, camera_info.K[4], camera_info.K[5]], [0, 0, 1]])) > 0:
             raise ("error: intrinsic camera matrix changed!")
         self.tVec = np.append(self.tVec, color_image.header.stamp.secs + color_image.header.stamp.nsecs / 10 ** 9)
-        #print("1[ms]", (time.time() - ti) * 1000)
-        #t = time.time()
+        # print("1[ms]", (time.time() - ti) * 1000)
+        # t = time.time()
         color_image = CvBridge().imgmsg_to_cv2(color_image, desired_encoding='passthrough')
         # ROI=[[1, 0.5], [1, 1], [0.55, 1], [0.55, 0.5]]
-        u0=int(0.55*1920)
-        v0=int(0.5*1200)
-        color_image=color_image[v0:1200, u0:1920, :]
+        u0 = int(0.55 * 1920)
+        v0 = int(0.5 * 1200)
+        color_image = color_image[v0:1200, u0:1920, :]
         # cv2.imwrite(log_dir + "/color_image.jpeg", color_image)
-        #print("2[ms]", (time.time() - t) * 1000)
-        #t = time.time()
+        # print("2[ms]", (time.time() - t) * 1000)
+        # t = time.time()
         # TODO subscribe directly to gray image?
         gray = cv2.cvtColor(color_image, cv2.COLOR_BGR2GRAY)
-        #print("2gray[ms]", (time.time() - t) * 1000)
-        #t = time.time()
+        # print("2gray[ms]", (time.time() - t) * 1000)
+        # t = time.time()
         # TODO here is time consuming
         tags = self.at_detector.detect(gray, False, camera_params=None)
         tag = tags[0]
         idx_tag = 3
         u, v = tag.corners[idx_tag]
         # u,v=[1217.89733887,  720.61071777]
-        u = int(u)+u0
-        v = int(v)+v0
-        #print("3[ms]", (time.time() - t) * 1000)
-        #t = time.time()
+        u = int(u) + u0
+        v = int(v) + v0
+        # print("3[ms]", (time.time() - t) * 1000)
+        # t = time.time()
         depth_map = np.array(CvBridge().imgmsg_to_cv2(depth_map, desired_encoding='passthrough'), dtype=np.float32)
         # A = np.nan_to_num(depth_map, nan=0, posinf=0, neginf=0)*255
         # cv2.imwrite(log_dir + "/depth_map.jpeg", A)
-        #print("4[ms]", (time.time() - t) * 1000)
-        #t = time.time()
+        # print("4[ms]", (time.time() - t) * 1000)
+        # t = time.time()
         Z = np.nanmean(depth_map[v - 2: v + 2, u - 2: u + 2])
         X = Z * (u - self.A[0, 2]) / self.A[0, 0]
         Y = Z * (v - self.A[1, 2]) / self.A[1, 1]
         self.P_c_hat = np.hstack((self.P_c_hat, np.array([[X], [Y], [Z], [1]])))
-        #print("5[ms]", (time.time() - t) * 1000)
-        #t = time.time()
+        # print("5[ms]", (time.time() - t) * 1000)
+        # t = time.time()
         depth_confidence_map = np.array(
             CvBridge().imgmsg_to_cv2(depth_confidence_map, desired_encoding='passthrough'), dtype=np.float32)
         self.conf_Z = np.append(self.conf_Z, np.nanmean(depth_confidence_map[v - 2: v + 2, u - 2: u + 2]))
         self.id += 1
-        #print("6[ms]", (time.time() - t) * 1000)
-        #t = time.time()
+        # print("6[ms]", (time.time() - t) * 1000)
+        # t = time.time()
         if self.id == 160:
             print("self.id=", self.id)
-            np.save(log_dir+"/tVec_s3.npy",self.tVec)
-            np.save(log_dir+"/P_c_hat_s3.npy",self.P_c_hat)
-            np.save(log_dir+"/conf_Z_s3.npy",self.conf_Z)
+            np.save(log_dir + "/tVec_s3.npy", self.tVec)
+            np.save(log_dir + "/P_c_hat_s3.npy", self.P_c_hat)
+            np.save(log_dir + "/conf_Z_s3.npy", self.conf_Z)
             exit()
         #     print("self.t=", self.tVec)
         #     print("dt[ms]=", np.diff(self.tVec[1:]) * 1000)
-        #print("7[ms]", (time.time() - t) * 1000)
-        #print("8[ms]", (time.time() - ti) * 1000)
+        # print("7[ms]", (time.time() - t) * 1000)
+        # print("8[ms]", (time.time() - ti) * 1000)
 
 
 def fast_get_timestamped_ros_data(log_dir):
@@ -751,11 +752,137 @@ def calc_results(log_dir):
     print("ended.")
 
 
+def fast_calc_results(log_dir):
+    tVec = np.load(log_dir + "/tVec_s3.npy")[1:]
+    P_c_hat = np.load(log_dir + "/P_c_hat_s3.npy")[:, 1:] * 1000  # [mm]
+    conf_Z = np.load(log_dir + "/conf_Z_s3.npy")[1:]
+    tVec = ((tVec - tVec[0]) * 1000)  # in [ms]
+    plt.figure(figsize=(8, 12))
+    plt.subplot(411)
+    plt.plot(tVec, P_c_hat[0, :], '-bo')
+    plt.ylabel("P_c_hat[0] [mm]")
+    plt.subplot(412)
+    plt.plot(tVec, P_c_hat[1, :], '-bo')
+    plt.ylabel("P_c_hat[1] [mm]")
+    plt.subplot(413)
+    plt.plot(tVec, P_c_hat[2, :], '-bo')
+    plt.ylabel("P_c_hat[2] [mm]")
+    plt.subplot(414)
+    plt.plot(tVec, conf_Z, '-r*')
+    plt.ylabel("conf_Z")
+    plt.xlabel("t [ms]")
+    plt.savefig(log_dir + "/measurements_s3.png", format="png")
+    plt.show()
+
+
+class publish_measurement_server:
+    def __init__(self):
+        self.start_measurement = False
+        self.img_gray = None
+        self.tVec = 0
+        self.helper_index = 0
+        self.id = 0
+        self.A = np.zeros((3, 3))
+        self.at_detector = Detector(searchpath=['apriltags'],
+                                    families='tag36h11',
+                                    nthreads=1,
+                                    quad_decimate=1.0,
+                                    quad_sigma=0.0,
+                                    refine_edges=1,
+                                    decode_sharpening=0.25,
+                                    debug=0)
+        self.corners = np.zeros((1, 4, 2))
+        self.P_c_hat = np.zeros((4, 1))
+        self.conf_Z = 0
+
+        self.myMessage = Vector3Stamped()
+        self.myMessage.vector.x = 0
+        self.myMessage.vector.y = 0
+        self.myMessage.vector.z = 0
+        self.myMessage.header.stamp = rospy.Time.now()
+        self.pub_p_hat_w = rospy.Publisher('p_hat_w', Vector3Stamped, queue_size=10)
+        r_t2c = np.load("/home/user/code/zed-sdk/mahdi/log/hand_to_eye_calibration/two_t_on_table/r_t2c_1.npy")
+        t_t2c = np.load("/home/user/code/zed-sdk/mahdi/log/hand_to_eye_calibration/two_t_on_table/t_t2c_1.npy")
+        t_c2t = -np.matrix(cv2.Rodrigues(r_t2c[0])[0]).T * np.matrix(t_t2c[0])
+        R_c2t = np.matrix(cv2.Rodrigues(r_t2c[0])[0]).T
+        self.H_c2t = np.vstack((np.hstack((R_c2t, t_c2t.reshape(3, 1))),
+                                np.array([0, 0, 0, 1])))
+        self.P_t_hat = Vector3Stamped()
+
+    def gotdata(self, color_image, depth_map, camera_info, trigger):
+        if trigger.vector.x == 1:
+            fx = camera_info.K[0]
+            fy = camera_info.K[4]
+            cx = camera_info.K[2]
+            cy = camera_info.K[5]
+            A = np.array([[fx, 0, cx], [0, fy, cy], [0, 0, 1]])
+            self.t = color_image.header.stamp.secs + color_image.header.stamp.nsecs
+            color_image = CvBridge().imgmsg_to_cv2(color_image, desired_encoding='passthrough')
+            u0 = int(0.55 * 1920)
+            v0 = int(0.5 * 1200)
+            color_image = color_image[v0:1200, u0:1920, :]
+            # TODO subscribe directly to gray image?
+            gray = cv2.cvtColor(color_image, cv2.COLOR_BGR2GRAY)
+            # TODO here is time consuming
+            tags = self.at_detector.detect(gray, False, camera_params=None)
+            # print("tags=",tags)
+            tag = tags[0]
+            idx_tag = 3
+            u, v = tag.corners[idx_tag]
+            u = int(u) + u0
+            v = int(v) + v0
+            depth_map = np.array(CvBridge().imgmsg_to_cv2(depth_map, desired_encoding='passthrough'), dtype=np.float32)
+            Z = np.nanmean(depth_map[v - 2: v + 2, u - 2: u + 2]) * 1000  # [mm]
+            X = Z * (u - A[0, 2]) / A[0, 0]  # [mm]
+            Y = Z * (v - A[1, 2]) / A[1, 1]  # [mm]
+            P_c_hat = np.array([[X], [Y], [Z], [1]])
+            P_t_hat = np.matrix(self.H_c2t) * np.matrix(P_c_hat.reshape(4, 1))
+            self.P_t_hat.vector.x = P_t_hat[0]
+            self.P_t_hat.vector.y = P_t_hat[1]
+            self.P_t_hat.vector.z = P_t_hat[2]
+
+            self.pub_p_hat_w.publish(self.P_t_hat)
+            info = "measurement published!!!"
+            rospy.loginfo(info)
+
+    # def gotTriggerData(self, data):
+    #     info = "STEPPERMOTOR_messages received!"
+    #     rospy.loginfo(info)
+    #     if self.start_measurement == False:
+    #         if data.vector.x == 1:
+    #             self.start_measurement = True
+    #             info = "Trigger measurement received!!"
+    #             rospy.loginfo(info)
+
+
+def publish_measurement():
+    rospy.init_node('my_node')
+    server = publish_measurement_server()
+    color_image_listener = message_filters.Subscriber('/zedxm/zed_node/rgb/image_rect_color', Image)
+    depth_map_listener = message_filters.Subscriber('/zedxm/zed_node/depth/depth_registered', Image)
+    camera_info_listener = message_filters.Subscriber('/zedxm/zed_node/depth/camera_info', CameraInfo)
+    trigger_listener = message_filters.Subscriber('PRIMITIVE_velocity_controller/STEPPERMOTOR_messages', Vector3Stamped)
+    ts = message_filters.ApproximateTimeSynchronizer(
+        [color_image_listener, depth_map_listener, camera_info_listener, trigger_listener],
+        100,
+        0.01)  # slop parameter in the constructor that defines the delay (in seconds) with which messages can be synchronized.
+    ts.registerCallback(server.gotdata)
+    # topicName = "PRIMITIVE_velocity_controller/STEPPERMOTOR_messages"
+    # subscriber = rospy.Subscriber(topicName, Vector3Stamped, server.gotTriggerData, queue_size=5)
+    hz = 100
+    rate = rospy.Rate(hz)
+    while not rospy.is_shutdown():
+        rate.sleep()
+    # rospy.spin()
+
+
 if __name__ == '__main__':
     log_dir = "/home/user/code/zed-sdk/mahdi/log/hand_to_eye_calibration/two_t_on_table/measurements"
     # save_calib_data(log_dir)
     # hand_to_eye_calib(log_dir)
     # check_accuracy(log_dir)
     # get_timestamped_ros_data(log_dir)
-    fast_get_timestamped_ros_data(log_dir)
     # calc_results(log_dir)
+    # fast_get_timestamped_ros_data(log_dir)
+    # fast_calc_results(log_dir)
+    publish_measurement()
