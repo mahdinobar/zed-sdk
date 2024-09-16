@@ -684,8 +684,8 @@ def calc_results(log_dir):
     plt.plot(t[:-1] / 1000, dPc[:, 2], '-bo')
     plt.ylabel("dPc[2] [mm]")
     plt.xlabel("time [s]")
-    plt.show()
     plt.savefig(log_dir + "/dPc.png", format="png")
+    plt.show()
 
     # P_t_gt_0_measured = np.array([506.5, -342, 77.5])
     # P_t_gt_0_measured = np.array([9.5*50+20-1+11.3+5, -(3.5*50+65+95), 76.8-25+3+5])
@@ -708,7 +708,7 @@ def calc_results(log_dir):
     plt.figure(figsize=(8, 10))
     # fig.suptitle('speed_1', fontsize=10)
     plt.subplot(411)
-    plt.title("speed_1")
+    plt.title("speed_2")
     plt.plot(t / 1000, np.linalg.norm(P_t_hat_all[:, :3] - P_t_gt_all, axis=1), '-ko')
     plt.ylabel("norm Pt_hat-Pt_gt [mm]")
     plt.subplot(412)
@@ -725,8 +725,8 @@ def calc_results(log_dir):
     plt.ylabel("Pt[2] [mm]")
     plt.xlabel("time [s]")
     plt.legend(loc="upper right")
-    plt.show()
     plt.savefig(log_dir + "/Pt.png", format="png")
+    plt.show()
 
     plt.figure(figsize=(8, 12))
     plt.subplot(411)
@@ -742,8 +742,8 @@ def calc_results(log_dir):
     plt.plot(t[:-1] / 1000, dPc[:, 2] / dt * 1000, '-bo')
     plt.ylabel("dPc[2] [mm/s]")
     plt.xlabel("time [s]")
-    plt.show()
     plt.savefig(log_dir + "/speed_est_camera.png", format="png")
+    plt.show()
 
     np.save(log_dir + "/P_t_gt_0_measured.npy", P_t_gt_0_measured)
     np.save(log_dir + "/P_t_gt_all.npy", P_t_gt_all)
@@ -809,41 +809,58 @@ class publish_measurement_server:
                                 np.array([0, 0, 0, 1])))
         self.P_t_hat = Vector3Stamped()
 
-    def gotdata(self, color_image, depth_map, camera_info, trigger):
-        if trigger.vector.x == 1:
-            fx = camera_info.K[0]
-            fy = camera_info.K[4]
-            cx = camera_info.K[2]
-            cy = camera_info.K[5]
-            A = np.array([[fx, 0, cx], [0, fy, cy], [0, 0, 1]])
-            self.t = color_image.header.stamp.secs + color_image.header.stamp.nsecs
-            color_image = CvBridge().imgmsg_to_cv2(color_image, desired_encoding='passthrough')
-            u0 = int(0.55 * 1920)
-            v0 = int(0.5 * 1200)
-            color_image = color_image[v0:1200, u0:1920, :]
-            # TODO subscribe directly to gray image?
-            gray = cv2.cvtColor(color_image, cv2.COLOR_BGR2GRAY)
-            # TODO here is time consuming
-            tags = self.at_detector.detect(gray, False, camera_params=None)
-            # print("tags=",tags)
-            tag = tags[0]
-            idx_tag = 3
-            u, v = tag.corners[idx_tag]
-            u = int(u) + u0
-            v = int(v) + v0
-            depth_map = np.array(CvBridge().imgmsg_to_cv2(depth_map, desired_encoding='passthrough'), dtype=np.float32)
-            Z = np.nanmean(depth_map[v - 2: v + 2, u - 2: u + 2]) * 1000  # [mm]
-            X = Z * (u - A[0, 2]) / A[0, 0]  # [mm]
-            Y = Z * (v - A[1, 2]) / A[1, 1]  # [mm]
-            P_c_hat = np.array([[X], [Y], [Z], [1]])
-            P_t_hat = np.matrix(self.H_c2t) * np.matrix(P_c_hat.reshape(4, 1))
-            self.P_t_hat.vector.x = P_t_hat[0]
-            self.P_t_hat.vector.y = P_t_hat[1]
-            self.P_t_hat.vector.z = P_t_hat[2]
+    def gotdata(self, color_image, depth_map, camera_info):
+        fx = camera_info.K[0]
+        fy = camera_info.K[4]
+        cx = camera_info.K[2]
+        cy = camera_info.K[5]
+        A = np.array([[fx, 0, cx], [0, fy, cy], [0, 0, 1]])
+        self.t = color_image.header.stamp.secs + color_image.header.stamp.nsecs
+        color_image = CvBridge().imgmsg_to_cv2(color_image, desired_encoding='passthrough')
+        u0 = int(0.55 * 1920)
+        v0 = int(0.5 * 1200)
+        color_image = color_image[v0:1200, u0:1920, :]
+        # TODO subscribe directly to gray image?
+        gray = cv2.cvtColor(color_image, cv2.COLOR_BGR2GRAY)
+        # TODO here is time consuming
+        tags = self.at_detector.detect(gray, False, camera_params=None)
+        # print("tags=",tags)
+        tag = tags[0]
+        idx_tag = 3
+        u, v = tag.corners[idx_tag]
+        u = int(u) + u0
+        v = int(v) + v0
+        depth_map = np.array(CvBridge().imgmsg_to_cv2(depth_map, desired_encoding='passthrough'), dtype=np.float32)
+        Z = np.nanmean(depth_map[v - 2: v + 2, u - 2: u + 2]) * 1000  # [mm]
+        X = Z * (u - A[0, 2]) / A[0, 0]  # [mm]
+        Y = Z * (v - A[1, 2]) / A[1, 1]  # [mm]
+        P_c_hat = np.array([[X], [Y], [Z], [1]])
+        P_t_hat = np.matrix(self.H_c2t) * np.matrix(P_c_hat.reshape(4, 1))
+        self.P_t_hat.vector.x = P_t_hat[0]
+        self.P_t_hat.vector.y = P_t_hat[1]
+        self.P_t_hat.vector.z = P_t_hat[2]
 
-            self.pub_p_hat_w.publish(self.P_t_hat)
-            info = "measurement published!!!"
-            rospy.loginfo(info)
+        self.pub_p_hat_w.publish(self.P_t_hat)
+        # info = "measurement published!!!"
+        info = "self.P_t_hat.vector.x-y-z={},{},{}".format(self.P_t_hat.vector.x,self.P_t_hat.vector.y,self.P_t_hat.vector.z)
+        rospy.loginfo(info)
+    def gotTriggerData(self, trigger):
+        if trigger.vector.x == 1:
+            color_image_listener = message_filters.Subscriber('/zedxm/zed_node/rgb/image_rect_color', Image)
+            depth_map_listener = message_filters.Subscriber('/zedxm/zed_node/depth/depth_registered', Image)
+            camera_info_listener = message_filters.Subscriber('/zedxm/zed_node/depth/camera_info', CameraInfo)
+            # trigger_listener = message_filters.Subscriber('PRIMITIVE_velocity_controller/STEPPERMOTOR_messages', Vector3Stamped)
+            ts = message_filters.ApproximateTimeSynchronizer(
+                [color_image_listener, depth_map_listener, camera_info_listener],
+                100,
+                0.01)  # slop parameter in the constructor that defines the delay (in seconds) with which messages can be synchronized.
+            ts.registerCallback(self.gotdata)
+            hz = 100
+            rate = rospy.Rate(hz)
+            while not rospy.is_shutdown():
+                rate.sleep()
+            # rospy.spin()
+
 
     # def gotTriggerData(self, data):
     #     info = "STEPPERMOTOR_messages received!"
@@ -858,17 +875,18 @@ class publish_measurement_server:
 def publish_measurement():
     rospy.init_node('my_node')
     server = publish_measurement_server()
-    color_image_listener = message_filters.Subscriber('/zedxm/zed_node/rgb/image_rect_color', Image)
-    depth_map_listener = message_filters.Subscriber('/zedxm/zed_node/depth/depth_registered', Image)
-    camera_info_listener = message_filters.Subscriber('/zedxm/zed_node/depth/camera_info', CameraInfo)
-    trigger_listener = message_filters.Subscriber('PRIMITIVE_velocity_controller/STEPPERMOTOR_messages', Vector3Stamped)
-    ts = message_filters.ApproximateTimeSynchronizer(
-        [color_image_listener, depth_map_listener, camera_info_listener, trigger_listener],
-        100,
-        0.01)  # slop parameter in the constructor that defines the delay (in seconds) with which messages can be synchronized.
-    ts.registerCallback(server.gotdata)
-    # topicName = "PRIMITIVE_velocity_controller/STEPPERMOTOR_messages"
-    # subscriber = rospy.Subscriber(topicName, Vector3Stamped, server.gotTriggerData, queue_size=5)
+    # color_image_listener = message_filters.Subscriber('/zedxm/zed_node/rgb/image_rect_color', Image)
+    # depth_map_listener = message_filters.Subscriber('/zedxm/zed_node/depth/depth_registered', Image)
+    # camera_info_listener = message_filters.Subscriber('/zedxm/zed_node/depth/camera_info', CameraInfo)
+    # # trigger_listener = message_filters.Subscriber('PRIMITIVE_velocity_controller/STEPPERMOTOR_messages', Vector3Stamped)
+    # ts = message_filters.ApproximateTimeSynchronizer(
+    #     [color_image_listener, depth_map_listener, camera_info_listener],
+    #     100,
+    #     0.01)  # slop parameter in the constructor that defines the delay (in seconds) with which messages can be synchronized.
+    # ts.registerCallback(server.gotdata)
+    # topicName = "information"
+    topicName = "PRIMITIVE_velocity_controller/STEPPERMOTOR_messages"
+    subscriber = rospy.Subscriber(topicName, Vector3Stamped, server.gotTriggerData, queue_size=5)
     hz = 100
     rate = rospy.Rate(hz)
     while not rospy.is_shutdown():
@@ -877,12 +895,12 @@ def publish_measurement():
 
 
 if __name__ == '__main__':
-    log_dir = "/home/user/code/zed-sdk/mahdi/log/hand_to_eye_calibration/two_t_on_table/measurements"
+    log_dir = "/home/user/code/zed-sdk/mahdi/log/hand_to_eye_calibration/two_t_on_table/validation/test_2"
     # save_calib_data(log_dir)
     # hand_to_eye_calib(log_dir)
     # check_accuracy(log_dir)
     # get_timestamped_ros_data(log_dir)
-    # calc_results(log_dir)
+    calc_results(log_dir)
     # fast_get_timestamped_ros_data(log_dir)
     # fast_calc_results(log_dir)
-    publish_measurement()
+    # publish_measurement()
