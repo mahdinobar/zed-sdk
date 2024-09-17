@@ -699,25 +699,22 @@ def calc_results(log_dir):
     plt.savefig(log_dir + "/dPc.png", format="png")
     plt.show()
 
-    # P_t_gt_0_measured = np.array([506.5, -342, 77.5])
-    # P_t_gt_0_measured = np.array([9.5*50+20-1+11.3+5, -(3.5*50+65+95), 76.8-25+3+5])
-    # P_t_gt_0_measured = np.array([9.5 * 50 + 30 + 4 + 0.1 + 4.3, -5.5 * 50 + 4 + 0.1, 80 - 25 - 1.5 + 14.1])
-    P_t_gt_0_measured = np.array([513.4, -270.9, 68])
+    P_t_gt_0_measured = np.array([513, -271, 68])
     # TODO
-    N_trigger = 20
-    bias = np.array(
-        [np.nanmean(P_t_hat_all[1:N_trigger, 0]) - P_t_gt_0_measured[0],
-         np.nanmean(P_t_hat_all[1:N_trigger - 1, 1]) - P_t_gt_0_measured[1],
-         np.nanmean(P_t_hat_all[1:N_trigger, 2]) - P_t_gt_0_measured[2]])
-    # bias = np.array([0, 0, 0])
+    N_trigger = 11
+    # bias = np.array(
+    #     [np.nanmean(P_t_hat_all[1:N_trigger, 0]) - P_t_gt_0_measured[0],
+    #      np.nanmean(P_t_hat_all[1:N_trigger - 1, 1]) - P_t_gt_0_measured[1],
+    #      np.nanmean(P_t_hat_all[1:N_trigger, 2]) - P_t_gt_0_measured[2]])
+    bias = np.array([0, 0, 0])
     P_t_gt_0 = P_t_gt_0_measured + bias
     P_t_gt_all = np.zeros((N, 3)) + P_t_gt_0
     # P_t_gt_all[:, 1] += np.linalg.norm(P_c_all[:, :3], axis=1) - np.linalg.norm(P_c_all[:, :3], axis=1)[0]
-    for i in range(N_trigger, 87):
-        P_t_gt_all[i, 1] += 2.  # correcting initial position to move
+    for i in range(N_trigger, 71):
+        P_t_gt_all[i, 1] += 4.8  # correcting initial position to move
         for j in range(N_trigger, i):
             P_t_gt_all[i, 1] += (dt[j]) * 34.9028e-3
-    for k in range(87, N):
+    for k in range(71, N):
         P_t_gt_all[k, 1] = P_t_gt_all[k - 1, 1]
     # TODO
     # dp=np.diff(time_stamp_all) * 21.64*2
@@ -914,7 +911,7 @@ def publish_measurement():
 
 
 if __name__ == '__main__':
-    log_dir = "/home/user/code/zed-sdk/mahdi/log/hand_to_eye_calibration/two_t_on_table/validation/test_vel_34_9028_mm_s_faster_slop_1ms"
+    log_dir = "/home/user/code/zed-sdk/mahdi/log/hand_to_eye_calibration/two_t_on_table/validation/test_vel_34_9028_mm_s_faster_slop_1ms_ROI2"
     # save_calib_data(log_dir)
     # hand_to_eye_calib(log_dir)
     # check_accuracy(log_dir)
