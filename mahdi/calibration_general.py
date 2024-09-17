@@ -382,7 +382,7 @@ class ROSserver:
         self.myMessage.vector.z = 0
         self.myMessage.header.stamp = rospy.Time.now()
 
-        self.N = 100  # total number of images to save
+        self.N = 10  # total number of images to save
         self.color_image = np.zeros((self.N, 1200, 1920, 4))
         self.depth_map = np.zeros((self.N, 1200, 1920))
         self.depth_confidence_map = np.zeros((self.N, 1200, 1920))
@@ -588,7 +588,7 @@ def fast_get_timestamped_ros_data(log_dir):
 
 
 def calc_results(log_dir):
-    N = 100
+    N = 10
     P_c_all = []
     P_t_hat_all = []
     P_t_gt_all = np.zeros((N, 4))
@@ -699,23 +699,23 @@ def calc_results(log_dir):
     plt.savefig(log_dir + "/dPc.png", format="png")
     plt.show()
 
-    P_t_gt_0_measured = np.array([513, -271, 68])
+    P_t_gt_0_measured = np.array([513, -271+475.5, 69])
     # TODO
-    N_trigger = 11
-    # bias = np.array(
-    #     [np.nanmean(P_t_hat_all[1:N_trigger, 0]) - P_t_gt_0_measured[0],
-    #      np.nanmean(P_t_hat_all[1:N_trigger - 1, 1]) - P_t_gt_0_measured[1],
-    #      np.nanmean(P_t_hat_all[1:N_trigger, 2]) - P_t_gt_0_measured[2]])
+    # N_trigger = 14
+    # # bias = np.array(
+    # #     [np.nanmean(P_t_hat_all[1:N_trigger, 0]) - P_t_gt_0_measured[0],
+    # #      np.nanmean(P_t_hat_all[1:N_trigger - 1, 1]) - P_t_gt_0_measured[1],
+    # #      np.nanmean(P_t_hat_all[1:N_trigger, 2]) - P_t_gt_0_measured[2]])
     bias = np.array([0, 0, 0])
     P_t_gt_0 = P_t_gt_0_measured + bias
     P_t_gt_all = np.zeros((N, 3)) + P_t_gt_0
-    # P_t_gt_all[:, 1] += np.linalg.norm(P_c_all[:, :3], axis=1) - np.linalg.norm(P_c_all[:, :3], axis=1)[0]
-    for i in range(N_trigger, 71):
-        P_t_gt_all[i, 1] += 4.8  # correcting initial position to move
-        for j in range(N_trigger, i):
-            P_t_gt_all[i, 1] += (dt[j]) * 34.9028e-3
-    for k in range(71, N):
-        P_t_gt_all[k, 1] = P_t_gt_all[k - 1, 1]
+    # # P_t_gt_all[:, 1] += np.linalg.norm(P_c_all[:, :3], axis=1) - np.linalg.norm(P_c_all[:, :3], axis=1)[0]
+    # for i in range(N_trigger, 75):
+    #     P_t_gt_all[i, 1] += 2.2  # correcting initial position to move
+    #     for j in range(N_trigger, i):
+    #         P_t_gt_all[i, 1] += (dt[j]) * 34.9028e-3
+    # for k in range(75, N):
+    #     P_t_gt_all[k, 1] = P_t_gt_all[k - 1, 1]
     # TODO
     # dp=np.diff(time_stamp_all) * 21.64*2
     # for i in range(N_trigger,N):
@@ -911,12 +911,12 @@ def publish_measurement():
 
 
 if __name__ == '__main__':
-    log_dir = "/home/user/code/zed-sdk/mahdi/log/hand_to_eye_calibration/two_t_on_table/validation/test_vel_34_9028_mm_s_faster_slop_1ms_ROI2"
+    log_dir = "/home/user/code/zed-sdk/mahdi/log/hand_to_eye_calibration/two_t_on_table/validation/test_vel_34_9028_mm_s_faster_slop_1ms_ROI2/fixed_at_end_NEURAL_PLUS_repeat_more_light"
     # save_calib_data(log_dir)
     # hand_to_eye_calib(log_dir)
     # check_accuracy(log_dir)
-    get_timestamped_ros_data(log_dir)
-    # calc_results(log_dir)
+    # get_timestamped_ros_data(log_dir)
+    calc_results(log_dir)
     # fast_get_timestamped_ros_data(log_dir)
     # fast_calc_results(log_dir)
     # publish_measurement()
