@@ -382,9 +382,14 @@ class ROSserver:
         self.myMessage.vector.z = 0
         self.myMessage.header.stamp = rospy.Time.now()
 
+        self.N = 100  # total number of images to save
+        self.color_image = np.zeros((self.N, 1200, 1920, 4))
+        self.depth_map = np.zeros((self.N, 1200, 1920))
+        self.depth_confidence_map = np.zeros((self.N, 1200, 1920))
+        self.t = np.zeros(self.N)
+
     def gotdata(self, color_image, depth_map, depth_confidence_map, camera_info):
-        N = 60  # total number of images to save
-        if self.id < N:
+        if self.id < self.N:
             if self.id == 0:
                 # print("+++++++++++++++++++++++++++")
                 self.t0 = color_image.header.stamp.secs + color_image.header.stamp.nsecs / 10 ** 9
@@ -395,14 +400,14 @@ class ROSserver:
                 cy = camera_info.K[5]
                 self.A = np.array([[fx, 0, cx], [0, fy, cy], [0, 0, 1]])
                 np.save(log_dir + "/A.npy", self.A)
-            if self.id == 20:  # switch on the conveyor after at data 20
-                self.myMessage.vector.x = 1
-            if np.sum(self.A != np.array(
-                    [[camera_info.K[0], 0, camera_info.K[2]], [0, camera_info.K[4], camera_info.K[5]], [0, 0, 1]])) > 0:
-                raise ("error: intrinsic camera matrix changed!")
+            # if self.id == 20:  # switch on the conveyor after at data 20
+            #     self.myMessage.vector.x = 1
+            # if np.sum(self.A != np.array(
+            #         [[camera_info.K[0], 0, camera_info.K[2]], [0, camera_info.K[4], camera_info.K[5]], [0, 0, 1]])) > 0:
+            #     raise ("error: intrinsic camera matrix changed!")
             # print("t-t0[ms]=", (color_image.header.stamp.secs+color_image.header.stamp.nsecs/10**9 - self.t0)*1000)
             # print("dt[ms]=", (color_image.header.stamp.secs + color_image.header.stamp.nsecs / 10 ** 9 - self.t) * 1000)
-            self.t = color_image.header.stamp.secs + color_image.header.stamp.nsecs / 10 ** 9
+            t = color_image.header.stamp.secs + color_image.header.stamp.nsecs / 10 ** 9
             # print("timestamp_color_image={} [s]".format(
             #     color_image.header.stamp.secs + color_image.header.stamp.nsecs / 10 ** 9))
             # print("timestamp_depth_map={} [s]".format(
@@ -413,15 +418,21 @@ class ROSserver:
             depth_map = np.array(CvBridge().imgmsg_to_cv2(depth_map, desired_encoding='passthrough'), dtype=np.float32)
             depth_confidence_map = np.array(
                 CvBridge().imgmsg_to_cv2(depth_confidence_map, desired_encoding='passthrough'), dtype=np.float32)
-            np.save(log_dir + "/color_image_{}.npy".format(str(self.id)), color_image)
-            cv2.imwrite(log_dir + "/color_image_{}.png".format(str(self.id)), color_image)
-            np.save(log_dir + "/depth_map_{}.npy".format(str(self.id)), depth_map)
-            cv2.imwrite(log_dir + "/depth_map_{}.png".format(str(self.id)), depth_map)
-            np.save(log_dir + "/depth_confidence_map_{}.npy".format(str(self.id)), depth_confidence_map)
-            cv2.imwrite(log_dir + "/depth_confidence_map_{}.png".format(str(self.id)), depth_confidence_map)
-            np.save(log_dir + "/time_stamp_{}.npy".format(str(self.id)), self.t)
+            self.color_image[self.id,:,:,:]=color_image
+            self.depth_map[self.id,:,:]=depth_map
+            self.depth_confidence_map[self.id,:,:]=depth_confidence_map
+            self.t[self.id]=t
             # print("self.id=", self.id)
         self.id += 1
+        if self.id == self.N:
+            for id_ in range(0,self.N):
+                np.save(log_dir + "/color_image_{}.npy".format(str(id_)), self.color_image[id_,:,:,:])
+                cv2.imwrite(log_dir + "/color_image_{}.png".format(str(id_)), self.color_image[id_,:,:,:])
+                np.save(log_dir + "/depth_map_{}.npy".format(str(id_)), self.depth_map[id_,:,:])
+                cv2.imwrite(log_dir + "/depth_map_{}.png".format(str(id_)), self.depth_map[id_,:,:])
+                np.save(log_dir + "/depth_confidence_map_{}.npy".format(str(id_)), self.depth_confidence_map[id_,:,:])
+                cv2.imwrite(log_dir + "/depth_confidence_map_{}.png".format(str(id_)), self.depth_confidence_map[id_,:,:])
+                np.save(log_dir + "/time_stamp_{}.npy".format(str(id_)), self.t[id_])
 
 
 def get_timestamped_ros_data(log_dir):
@@ -433,23 +444,23 @@ def get_timestamped_ros_data(log_dir):
     depth_confidence_map_listener = message_filters.Subscriber('/zedxm/zed_node/confidence/confidence_map', Image)
     ts = message_filters.ApproximateTimeSynchronizer(
         [color_image_listener, depth_map_listener, depth_confidence_map_listener, camera_info_listener],
-        5,
-        0.01)  # slop parameter in the constructor that defines the delay (in seconds) with which messages can be synchronized.
+        1,
+        0.001)  # slop parameter in the constructor that defines the delay (in seconds) with which messages can be synchronized.
     ts.registerCallback(server.gotdata)
     # rospy.spin()
 
     # nodeName = "messagepublisher"
-    topicName = "information"
+    # topicName = "information"
     # rospy.init_node(nodeName, anonymous=True)
-    publisher = rospy.Publisher(topicName, Vector3Stamped, queue_size=0)
-    hz = 100
+    # publisher = rospy.Publisher(topicName, Vector3Stamped, queue_size=0)
+    hz = 1000
     rate = rospy.Rate(hz)
     # id_seq=0
     while not rospy.is_shutdown():
         # id_seq += 1
         # server.myMessage.header.seq = id_seq
         # rospy.loginfo(server.myMessage)
-        publisher.publish(server.myMessage)
+        # publisher.publish(server.myMessage)
         rate.sleep()
 
     # rate = rospy.Rate(1)  # 10hz
@@ -577,13 +588,14 @@ def fast_get_timestamped_ros_data(log_dir):
 
 
 def calc_results(log_dir):
-    N = 60
+    N = 100
     P_c_all = []
     P_t_hat_all = []
     P_t_gt_all = np.zeros((N, 4))
     time_stamp_all = np.zeros(N)
     for id in range(0, N):
-        img_l = np.load(log_dir + "/color_image_{}.npy".format(str(id)))
+        print(id)
+        img_l = np.load(log_dir + "/color_image_{}.npy".format(str(id))).astype(dtype="uint8")
         time_stamp = np.load(log_dir + "/time_stamp_{}.npy".format(str(id)))
         depth_l = np.load(log_dir + "/depth_map_{}.npy".format(str(id)))
 
@@ -689,17 +701,24 @@ def calc_results(log_dir):
 
     # P_t_gt_0_measured = np.array([506.5, -342, 77.5])
     # P_t_gt_0_measured = np.array([9.5*50+20-1+11.3+5, -(3.5*50+65+95), 76.8-25+3+5])
-    P_t_gt_0_measured = np.array([9.5 * 50 + 30 + 5 + 0.2 + 4.3, -5.5 * 50 + 5 + 0.2, 80 - 25 - 1.5 + 14.1])
+    # P_t_gt_0_measured = np.array([9.5 * 50 + 30 + 4 + 0.1 + 4.3, -5.5 * 50 + 4 + 0.1, 80 - 25 - 1.5 + 14.1])
+    P_t_gt_0_measured = np.array([513.4, -270.9, 68])
     # TODO
-    N_trigger = 6
+    N_trigger = 20
     bias = np.array(
-        [np.nanmean(P_t_hat_all[1:, 0]) - P_t_gt_0_measured[0],
+        [np.nanmean(P_t_hat_all[1:N_trigger, 0]) - P_t_gt_0_measured[0],
          np.nanmean(P_t_hat_all[1:N_trigger - 1, 1]) - P_t_gt_0_measured[1],
-         np.nanmean(P_t_hat_all[1:, 2]) - P_t_gt_0_measured[2]])
+         np.nanmean(P_t_hat_all[1:N_trigger, 2]) - P_t_gt_0_measured[2]])
     # bias = np.array([0, 0, 0])
     P_t_gt_0 = P_t_gt_0_measured + bias
     P_t_gt_all = np.zeros((N, 3)) + P_t_gt_0
-    P_t_gt_all[:, 1] += np.linalg.norm(P_c_all[:, :3], axis=1) - np.linalg.norm(P_c_all[:, :3], axis=1)[0]
+    # P_t_gt_all[:, 1] += np.linalg.norm(P_c_all[:, :3], axis=1) - np.linalg.norm(P_c_all[:, :3], axis=1)[0]
+    for i in range(N_trigger, 87):
+        P_t_gt_all[i, 1] += 2.  # correcting initial position to move
+        for j in range(N_trigger, i):
+            P_t_gt_all[i, 1] += (dt[j]) * 34.9028e-3
+    for k in range(87, N):
+        P_t_gt_all[k, 1] = P_t_gt_all[k - 1, 1]
     # TODO
     # dp=np.diff(time_stamp_all) * 21.64*2
     # for i in range(N_trigger,N):
@@ -708,7 +727,7 @@ def calc_results(log_dir):
     plt.figure(figsize=(8, 10))
     # fig.suptitle('speed_1', fontsize=10)
     plt.subplot(411)
-    plt.title("speed_2")
+    plt.title("speed = 34.9028 [mm/s]; nominal_pwm_period=25*2=50 micSec")
     plt.plot(t / 1000, np.linalg.norm(P_t_hat_all[:, :3] - P_t_gt_all, axis=1), '-ko')
     plt.ylabel("norm Pt_hat-Pt_gt [mm]")
     plt.subplot(412)
@@ -895,7 +914,7 @@ def publish_measurement():
 
 
 if __name__ == '__main__':
-    log_dir = "/home/user/code/zed-sdk/mahdi/log/hand_to_eye_calibration/two_t_on_table/validation/test_2"
+    log_dir = "/home/user/code/zed-sdk/mahdi/log/hand_to_eye_calibration/two_t_on_table/validation/test_vel_34_9028_mm_s_faster_slop_1ms"
     # save_calib_data(log_dir)
     # hand_to_eye_calib(log_dir)
     # check_accuracy(log_dir)
