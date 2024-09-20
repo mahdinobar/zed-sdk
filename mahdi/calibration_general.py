@@ -418,20 +418,21 @@ class ROSserver:
             depth_map = np.array(CvBridge().imgmsg_to_cv2(depth_map, desired_encoding='passthrough'), dtype=np.float32)
             depth_confidence_map = np.array(
                 CvBridge().imgmsg_to_cv2(depth_confidence_map, desired_encoding='passthrough'), dtype=np.float32)
-            self.color_image[self.id,:,:,:]=color_image
-            self.depth_map[self.id,:,:]=depth_map
-            self.depth_confidence_map[self.id,:,:]=depth_confidence_map
-            self.t[self.id]=t
+            self.color_image[self.id, :, :, :] = color_image
+            self.depth_map[self.id, :, :] = depth_map
+            self.depth_confidence_map[self.id, :, :] = depth_confidence_map
+            self.t[self.id] = t
             # print("self.id=", self.id)
         self.id += 1
         if self.id == self.N:
-            for id_ in range(0,self.N):
-                np.save(log_dir + "/color_image_{}.npy".format(str(id_)), self.color_image[id_,:,:,:])
-                cv2.imwrite(log_dir + "/color_image_{}.png".format(str(id_)), self.color_image[id_,:,:,:])
-                np.save(log_dir + "/depth_map_{}.npy".format(str(id_)), self.depth_map[id_,:,:])
-                cv2.imwrite(log_dir + "/depth_map_{}.png".format(str(id_)), self.depth_map[id_,:,:])
-                np.save(log_dir + "/depth_confidence_map_{}.npy".format(str(id_)), self.depth_confidence_map[id_,:,:])
-                cv2.imwrite(log_dir + "/depth_confidence_map_{}.png".format(str(id_)), self.depth_confidence_map[id_,:,:])
+            for id_ in range(0, self.N):
+                np.save(log_dir + "/color_image_{}.npy".format(str(id_)), self.color_image[id_, :, :, :])
+                cv2.imwrite(log_dir + "/color_image_{}.png".format(str(id_)), self.color_image[id_, :, :, :])
+                np.save(log_dir + "/depth_map_{}.npy".format(str(id_)), self.depth_map[id_, :, :])
+                cv2.imwrite(log_dir + "/depth_map_{}.png".format(str(id_)), self.depth_map[id_, :, :])
+                np.save(log_dir + "/depth_confidence_map_{}.npy".format(str(id_)), self.depth_confidence_map[id_, :, :])
+                cv2.imwrite(log_dir + "/depth_confidence_map_{}.png".format(str(id_)),
+                            self.depth_confidence_map[id_, :, :])
                 np.save(log_dir + "/time_stamp_{}.npy".format(str(id_)), self.t[id_])
 
 
@@ -833,7 +834,8 @@ class publish_measurement_server:
         cx = camera_info.K[2]
         cy = camera_info.K[5]
         A = np.array([[fx, 0, cx], [0, fy, cy], [0, 0, 1]])
-        self.t = color_image.header.stamp.secs + color_image.header.stamp.nsecs
+        # self.t = color_image.header.stamp.secs + color_image.header.stamp.nsecs / 10 ** 9
+        self.P_t_hat.header = color_image.header
         color_image = CvBridge().imgmsg_to_cv2(color_image, desired_encoding='passthrough')
         u0 = int(0.55 * 1920)
         v0 = int(0.5 * 1200)
@@ -844,7 +846,7 @@ class publish_measurement_server:
         tags = self.at_detector.detect(gray, False, camera_params=None)
         # print("tags=",tags)
         tag = tags[0]
-        idx_tag = 3
+        idx_tag = 2
         u, v = tag.corners[idx_tag]
         u = int(u) + u0
         v = int(v) + v0
@@ -860,25 +862,30 @@ class publish_measurement_server:
 
         self.pub_p_hat_w.publish(self.P_t_hat)
         # info = "measurement published!!!"
-        info = "self.P_t_hat.vector.x-y-z={},{},{}".format(self.P_t_hat.vector.x,self.P_t_hat.vector.y,self.P_t_hat.vector.z)
+        info = "x,y,z,t={},{},{},{}".format(self.P_t_hat.vector.x,
+                                                                self.P_t_hat.vector.y,
+                                                                self.P_t_hat.vector.z,
+                                                                self.P_t_hat.header.stamp.secs+self.P_t_hat.header.stamp.nsecs/1e9)
         rospy.loginfo(info)
-    def gotTriggerData(self, trigger):
-        if trigger.vector.x == 1:
-            color_image_listener = message_filters.Subscriber('/zedxm/zed_node/rgb/image_rect_color', Image)
-            depth_map_listener = message_filters.Subscriber('/zedxm/zed_node/depth/depth_registered', Image)
-            camera_info_listener = message_filters.Subscriber('/zedxm/zed_node/depth/camera_info', CameraInfo)
-            # trigger_listener = message_filters.Subscriber('PRIMITIVE_velocity_controller/STEPPERMOTOR_messages', Vector3Stamped)
-            ts = message_filters.ApproximateTimeSynchronizer(
-                [color_image_listener, depth_map_listener, camera_info_listener],
-                100,
-                0.01)  # slop parameter in the constructor that defines the delay (in seconds) with which messages can be synchronized.
-            ts.registerCallback(self.gotdata)
-            hz = 100
-            rate = rospy.Rate(hz)
-            while not rospy.is_shutdown():
-                rate.sleep()
-            # rospy.spin()
 
+    def gotTriggerData(self, trigger):
+        pass
+        # # TODO do you need this swith?!! can you improve the code?
+        # if trigger.vector.y == 1:
+        #     color_image_listener = message_filters.Subscriber('/zedxm/zed_node/rgb/image_rect_color', Image)
+        #     depth_map_listener = message_filters.Subscriber('/zedxm/zed_node/depth/depth_registered', Image)
+        #     camera_info_listener = message_filters.Subscriber('/zedxm/zed_node/depth/camera_info', CameraInfo)
+        #     # trigger_listener = message_filters.Subscriber('PRIMITIVE_velocity_controller/STEPPERMOTOR_messages', Vector3Stamped)
+        #     ts = message_filters.ApproximateTimeSynchronizer(
+        #         [color_image_listener, depth_map_listener, camera_info_listener],
+        #         100,
+        #         0.01)  # slop parameter in the constructor that defines the delay (in seconds) with which messages can be synchronized.
+        #     ts.registerCallback(self.gotdata)
+        #     hz = 100
+        #     rate = rospy.Rate(hz)
+        #     while not rospy.is_shutdown():
+        #         rate.sleep()
+        #     # rospy.spin()
 
     # def gotTriggerData(self, data):
     #     info = "STEPPERMOTOR_messages received!"
@@ -893,32 +900,46 @@ class publish_measurement_server:
 def publish_measurement():
     rospy.init_node('my_node')
     server = publish_measurement_server()
-    # color_image_listener = message_filters.Subscriber('/zedxm/zed_node/rgb/image_rect_color', Image)
-    # depth_map_listener = message_filters.Subscriber('/zedxm/zed_node/depth/depth_registered', Image)
-    # camera_info_listener = message_filters.Subscriber('/zedxm/zed_node/depth/camera_info', CameraInfo)
-    # # trigger_listener = message_filters.Subscriber('PRIMITIVE_velocity_controller/STEPPERMOTOR_messages', Vector3Stamped)
-    # ts = message_filters.ApproximateTimeSynchronizer(
-    #     [color_image_listener, depth_map_listener, camera_info_listener],
-    #     100,
-    #     0.01)  # slop parameter in the constructor that defines the delay (in seconds) with which messages can be synchronized.
-    # ts.registerCallback(server.gotdata)
-    # topicName = "information"
-    topicName = "PRIMITIVE_velocity_controller/STEPPERMOTOR_messages"
-    subscriber = rospy.Subscriber(topicName, Vector3Stamped, server.gotTriggerData, queue_size=5)
+    # # color_image_listener = message_filters.Subscriber('/zedxm/zed_node/rgb/image_rect_color', Image)
+    # # depth_map_listener = message_filters.Subscriber('/zedxm/zed_node/depth/depth_registered', Image)
+    # # camera_info_listener = message_filters.Subscriber('/zedxm/zed_node/depth/camera_info', CameraInfo)
+    # # # trigger_listener = message_filters.Subscriber('PRIMITIVE_velocity_controller/STEPPERMOTOR_messages', Vector3Stamped)
+    # # ts = message_filters.ApproximateTimeSynchronizer(
+    # #     [color_image_listener, depth_map_listener, camera_info_listener],
+    # #     100,
+    # #     0.01)  # slop parameter in the constructor that defines the delay (in seconds) with which messages can be synchronized.
+    # # ts.registerCallback(server.gotdata)
+    # # topicName = "information"
+    # topicName = "PRIMITIVE_velocity_controller/STEPPERMOTOR_messages"
+    # subscriber = rospy.Subscriber(topicName, Vector3Stamped, server.gotTriggerData, queue_size=5)
+    # hz = 100
+    # rate = rospy.Rate(hz)
+    # while not rospy.is_shutdown():
+    #     rate.sleep()
+    # # rospy.spin()
+
+    color_image_listener = message_filters.Subscriber('/zedxm/zed_node/rgb/image_rect_color', Image)
+    depth_map_listener = message_filters.Subscriber('/zedxm/zed_node/depth/depth_registered', Image)
+    camera_info_listener = message_filters.Subscriber('/zedxm/zed_node/depth/camera_info', CameraInfo)
+    # trigger_listener = message_filters.Subscriber('PRIMITIVE_velocity_controller/STEPPERMOTOR_messages', Vector3Stamped)
+    ts = message_filters.ApproximateTimeSynchronizer(
+        [color_image_listener, depth_map_listener, camera_info_listener],
+        100,
+        0.01)  # slop parameter in the constructor that defines the delay (in seconds) with which messages can be synchronized.
+    ts.registerCallback(server.gotdata)
     hz = 100
     rate = rospy.Rate(hz)
     while not rospy.is_shutdown():
         rate.sleep()
-    # rospy.spin()
 
 
 if __name__ == '__main__':
-    log_dir = "/home/user/code/zed-sdk/mahdi/log/hand_to_eye_calibration/two_t_on_table/validation/test_vel_34_9028_mm_s_faster_slop_1ms_NEURAL_PLUS"
+    # log_dir = "/home/user/code/zed-sdk/mahdi/log/hand_to_eye_calibration/two_t_on_table/validation/test_vel_34_9028_mm_s_faster_slop_1ms_NEURAL_PLUS"
     # save_calib_data(log_dir)
     # hand_to_eye_calib(log_dir)
     # check_accuracy(log_dir)
     # get_timestamped_ros_data(log_dir)
-    calc_results(log_dir)
+    # calc_results(log_dir)
     # fast_get_timestamped_ros_data(log_dir)
     # fast_calc_results(log_dir)
-    # publish_measurement()
+    publish_measurement()
