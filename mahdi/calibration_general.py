@@ -827,8 +827,10 @@ class publish_measurement_server:
         self.H_c2t = np.vstack((np.hstack((R_c2t, t_c2t.reshape(3, 1))),
                                 np.array([0, 0, 0, 1])))
         self.P_t_hat = Vector3Stamped()
+        self.delays=[]
 
     def gotdata(self, color_image, depth_map, camera_info):
+        ti = time.time()
         fx = camera_info.K[0]
         fy = camera_info.K[4]
         cx = camera_info.K[2]
@@ -861,6 +863,11 @@ class publish_measurement_server:
         self.P_t_hat.vector.z = P_t_hat[2]
 
         self.pub_p_hat_w.publish(self.P_t_hat)
+        print("delay[ms]=", (time.time() - ti) * 1000)
+        self.delays.append((time.time() - ti) * 1000)
+        # print(self.delays.__len__())
+        if self.delays.__len__()==50:
+            np.save("/home/user/code/zed-sdk/mahdi/log/hand_to_eye_calibration/two_t_on_table/validation/delays.npy",self.delays)
         # info = "measurement published!!!"
         info = "x,y,z,t={},{},{},{}".format(self.P_t_hat.vector.x,
                                                                 self.P_t_hat.vector.y,
@@ -943,3 +950,4 @@ if __name__ == '__main__':
     # fast_get_timestamped_ros_data(log_dir)
     # fast_calc_results(log_dir)
     publish_measurement()
+    # np.load("/home/user3211111111111111/code/zed-sdk/mahdi/log/hand_to_eye_calibration/two_t_on_table/validation/delays.npy")
