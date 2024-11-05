@@ -38,7 +38,7 @@ def cv2_imshow(a, window_name="image"):
     if a.ndim == 2:
         a = a.clip(100, 500).astype('uint8')
     cv2.imshow(window_name, a)
-    cv2.waitKey(500)
+    cv2.waitKey(0)
     cv2.destroyAllWindows()
 
 
@@ -827,10 +827,8 @@ class publish_measurement_server:
         self.H_c2t = np.vstack((np.hstack((R_c2t, t_c2t.reshape(3, 1))),
                                 np.array([0, 0, 0, 1])))
         self.P_t_hat = Vector3Stamped()
-        self.delays=[]
 
     def gotdata(self, color_image, depth_map, camera_info):
-        ti = time.time()
         fx = camera_info.K[0]
         fy = camera_info.K[4]
         cx = camera_info.K[2]
@@ -863,11 +861,6 @@ class publish_measurement_server:
         self.P_t_hat.vector.z = P_t_hat[2]
 
         self.pub_p_hat_w.publish(self.P_t_hat)
-        print("delay[ms]=", (time.time() - ti) * 1000)
-        self.delays.append((time.time() - ti) * 1000)
-        # print(self.delays.__len__())
-        if self.delays.__len__()==50:
-            np.save("/home/user/code/zed-sdk/mahdi/log/hand_to_eye_calibration/two_t_on_table/validation/delays.npy",self.delays)
         # info = "measurement published!!!"
         info = "x,y,z,t={},{},{},{}".format(self.P_t_hat.vector.x,
                                                                 self.P_t_hat.vector.y,
@@ -940,6 +933,187 @@ def publish_measurement():
         rate.sleep()
 
 
+class publish_measurement_server_EE:
+    def __init__(self):
+        self.start_measurement = False
+        self.img_gray = None
+        self.tVec = 0
+        self.helper_index = 0
+        self.id = 0
+        self.A = np.zeros((3, 3))
+        self.at_detector = Detector(searchpath=['apriltags'],
+                                    families='tag36h11',
+                                    nthreads=1,
+                                    quad_decimate=1.0,
+                                    quad_sigma=0.0,
+                                    refine_edges=1,
+                                    decode_sharpening=0.25,
+                                    debug=0)
+        self.corners = np.zeros((1, 4, 2))
+        self.P_c_hat = np.zeros((4, 1))
+        self.conf_Z = 0
+
+        self.myMessage = Vector3Stamped()
+        self.myMessage.vector.x = 0
+        self.myMessage.vector.y = 0
+        self.myMessage.vector.z = 0
+        self.myMessage.header.stamp = rospy.Time.now()
+        self.pub_p_hat_w = rospy.Publisher('p_hat_w', Vector3Stamped, queue_size=10)
+        r_t2c = np.load("/home/user/code/zed-sdk/mahdi/log/hand_to_eye_calibration/two_t_on_table/r_t2c_1.npy")
+        t_t2c = np.load("/home/user/code/zed-sdk/mahdi/log/hand_to_eye_calibration/two_t_on_table/t_t2c_1.npy")
+        t_c2t = -np.matrix(cv2.Rodrigues(r_t2c[0])[0]).T * np.matrix(t_t2c[0])
+        R_c2t = np.matrix(cv2.Rodrigues(r_t2c[0])[0]).T
+        self.H_c2t = np.vstack((np.hstack((R_c2t, t_c2t.reshape(3, 1))),
+                                np.array([0, 0, 0, 1])))
+        self.P_t_hat = Vector3Stamped()
+
+    def gotdata(self, color_image, depth_map, camera_info):
+        fx = camera_info.K[0]
+        fy = camera_info.K[4]
+        cx = camera_info.K[2]
+        cy = camera_info.K[5]
+        A = np.array([[fx, 0, cx], [0, fy, cy], [0, 0, 1]])
+        # self.t = color_image.header.stamp.secs + color_image.header.stamp.nsecs / 10 ** 9
+        self.P_t_hat.header = color_image.header
+        color_image = CvBridge().imgmsg_to_cv2(color_image, desired_encoding='passthrough')
+        u0 = int(0.4 * 1920)
+        v0 = int(0.15 * 1200)
+        uf = int(0.9 * 1920)
+        vf = int(0.65 * 1200)
+        # color_image = color_image[v0:1200, u0:1920, :]
+        color_image = color_image[v0:vf, u0:uf, :]
+        # TODO subscribe directly to gray image?
+        gray = cv2.cvtColor(color_image, cv2.COLOR_BGR2GRAY)
+        # TODO here is time consuming
+        tags = self.at_detector.detect(gray, False, camera_params=None)
+        # print("tags=",tags)
+        debug_color_img = color_image.astype(dtype="uint8")
+        for idx_tag in range(0,2):
+            tag = tags[idx_tag]
+            # ==========================================================
+            cv2.putText(debug_color_img, "idx_tag="+str(idx_tag),
+                        org=(tag.corners[0, 0].astype(int) - 50, tag.corners[0, 1].astype(int)-30),
+                        fontFace=cv2.FONT_HERSHEY_SIMPLEX,
+                        fontScale=0.5,
+                        color=(0, 0, 255))
+            for idx in range(len(tag.corners)):
+                # print(
+                #     "!!corner detected on image plane location = ({},{}) [pxls].".format(
+                #         tag.corners[idx, 0], tag.corners[idx, 1]))
+
+                cv2.line(debug_color_img, tuple(tag.corners[idx - 1, :].astype(int)),
+                         tuple(tag.corners[idx, :].astype(int)),
+                         (0, 255, 0))
+                cv2.drawMarker(debug_color_img, tuple(tag.corners[idx, :].astype(int)), color=(255, 0, 0))
+                cv2.putText(debug_color_img, str(idx),
+                            org=(tag.corners[idx, 0].astype(int) + 3, tag.corners[idx, 1].astype(int) + 3),
+                            fontFace=cv2.FONT_HERSHEY_SIMPLEX,
+                            fontScale=0.5,
+                            color=(255, 0, 0))
+                cv2.line(debug_color_img, tuple(tag.corners[idx - 1, :].astype(int)),
+                         tuple(tag.corners[idx, :].astype(int)),
+                         (0, 255, 0))
+                cv2.drawMarker(debug_color_img, tuple(tag.corners[idx, :].astype(int)), color=(255, 0, 0))
+                cv2.putText(debug_color_img, str(idx),
+                            org=(tag.corners[idx, 0].astype(int) + 3, tag.corners[idx, 1].astype(int) + 3),
+                            fontFace=cv2.FONT_HERSHEY_SIMPLEX,
+                            fontScale=0.5,
+                            color=(255, 0, 0))
+        cv2_imshow(debug_color_img, window_name="Apriltag detections id={}".format(0))
+            # ==========================================================
+
+        depth_map = np.array(CvBridge().imgmsg_to_cv2(depth_map, desired_encoding='passthrough'), dtype=np.float32)
+
+        idx_tag=0
+        # TODO change ordering here with specific nueric Apriltags automatically
+        # assumption below is that target tag is leftmost and upper than 435 pixel vertically
+            # if tags[i].corners[0,0]>tags[idx_tag].corners[0,0] and tags[i].corners[0,1]<435:
+        if tags[idx_tag].corners[0,1]>tags[idx_tag].corners[0,1]:
+                idx_tag = 1
+
+        tag = tags[idx_tag]
+        idx_edge = 0
+        urd, vrd = tag.corners[idx_edge]
+        urd = int(urd) + u0
+        vrd = int(vrd) + v0
+        Zrd = np.nanmean(depth_map[vrd - 2: vrd + 2, urd - 2: urd + 2]) * 1000  # [mm]
+        Xrd = Zrd * (urd - A[0, 2]) / A[0, 0]  # [mm]
+        Yrd = Zrd * (vrd - A[1, 2]) / A[1, 1]  # [mm]
+
+        idx_edge = 1
+        u1, v1 = tag.corners[idx_edge]
+        u1 = int(u1) + u0
+        v1 = int(v1) + v0
+        Z1 = np.nanmean(depth_map[v1 - 2: v1 + 2, u1 - 2: u1 + 2]) * 1000  # [mm]
+        X1 = Z1 * (u1 - A[0, 2]) / A[0, 0]  # [mm]
+        Y1 = Z1 * (v1 - A[1, 2]) / A[1, 1]  # [mm]
+
+        idx_edge = 2
+        u2, v2 = tag.corners[idx_edge]
+        u2 = int(u2) + u0
+        v2 = int(v2) + v0
+        Z2 = np.nanmean(depth_map[v2 - 2: v2 + 2, u2 - 2: u2 + 2]) * 1000  # [mm]
+        X2 = Z2 * (u2 - A[0, 2]) / A[0, 0]  # [mm]
+        Y2 = Z2 * (v2 - A[1, 2]) / A[1, 1]  # [mm]
+
+        u_v1=np.array([X2-X1,Y2-Y1,Z2-Z1])/np.linalg.norm(np.array([X2-X1,Y2-Y1,Z2-Z1]))
+        u_v2=np.array([Xrd-X1,Yrd-Y1,Zrd-Z1])/np.linalg.norm(np.array([Xrd-X1,Yrd-Y1,Zrd-Z1]))
+        v1=31.6*u_v1
+        v2=87.3*u_v2
+        v3=-17.3*np.cross(u_v1, u_v2)
+
+        # P_c_hat = np.array([[X], [Y], [Z], [1]])
+        P_c_hat = np.hstack((np.array([X1,Y1,Z1])+v1 + v2 + v3, 1)).reshape(4,1)
+        P_t_hat = np.matrix(self.H_c2t) * np.matrix(P_c_hat.reshape(4, 1))
+        self.P_t_hat.vector.x = P_t_hat[0]
+        self.P_t_hat.vector.y = P_t_hat[1]
+        self.P_t_hat.vector.z = P_t_hat[2]
+
+        self.pub_p_hat_w.publish(self.P_t_hat)
+        # info = "measurement published!!!"
+        info = "x,y,z,t={},{},{},{}".format(self.P_t_hat.vector.x,
+                                                                self.P_t_hat.vector.y,
+                                                                self.P_t_hat.vector.z,
+                                                                self.P_t_hat.header.stamp.secs+self.P_t_hat.header.stamp.nsecs/1e9)
+        rospy.loginfo(info)
+
+
+def publish_measurement_EE():
+    rospy.init_node('my_node')
+    server = publish_measurement_server_EE()
+    # # color_image_listener = message_filters.Subscriber('/zedxm/zed_node/rgb/image_rect_color', Image)
+    # # depth_map_listener = message_filters.Subscriber('/zedxm/zed_node/depth/depth_registered', Image)
+    # # camera_info_listener = message_filters.Subscriber('/zedxm/zed_node/depth/camera_info', CameraInfo)
+    # # # trigger_listener = message_filters.Subscriber('PRIMITIVE_velocity_controller/STEPPERMOTOR_messages', Vector3Stamped)
+    # # ts = message_filters.ApproximateTimeSynchronizer(
+    # #     [color_image_listener, depth_map_listener, camera_info_listener],
+    # #     100,
+    # #     0.01)  # slop parameter in the constructor that defines the delay (in seconds) with which messages can be synchronized.
+    # # ts.registerCallback(server.gotdata)
+    # # topicName = "information"
+    # topicName = "PRIMITIVE_velocity_controller/STEPPERMOTOR_messages"
+    # subscriber = rospy.Subscriber(topicName, Vector3Stamped, server.gotTriggerData, queue_size=5)
+    # hz = 100
+    # rate = rospy.Rate(hz)
+    # while not rospy.is_shutdown():
+    #     rate.sleep()
+    # # rospy.spin()
+
+    color_image_listener = message_filters.Subscriber('/zedxm/zed_node/rgb/image_rect_color', Image)
+    depth_map_listener = message_filters.Subscriber('/zedxm/zed_node/depth/depth_registered', Image)
+    camera_info_listener = message_filters.Subscriber('/zedxm/zed_node/depth/camera_info', CameraInfo)
+    # trigger_listener = message_filters.Subscriber('PRIMITIVE_velocity_controller/STEPPERMOTOR_messages', Vector3Stamped)
+    ts = message_filters.ApproximateTimeSynchronizer(
+        [color_image_listener, depth_map_listener, camera_info_listener],
+        100,
+        0.01)  # slop parameter in the constructor that defines the delay (in seconds) with which messages can be synchronized.
+    ts.registerCallback(server.gotdata)
+    hz = 100
+    rate = rospy.Rate(hz)
+    while not rospy.is_shutdown():
+        rate.sleep()
+
+
 if __name__ == '__main__':
     # log_dir = "/home/user/code/zed-sdk/mahdi/log/hand_to_eye_calibration/two_t_on_table/validation/test_vel_34_9028_mm_s_faster_slop_1ms_NEURAL_PLUS"
     # save_calib_data(log_dir)
@@ -949,5 +1123,5 @@ if __name__ == '__main__':
     # calc_results(log_dir)
     # fast_get_timestamped_ros_data(log_dir)
     # fast_calc_results(log_dir)
-    publish_measurement()
-    # np.load("/home/user3211111111111111/code/zed-sdk/mahdi/log/hand_to_eye_calibration/two_t_on_table/validation/delays.npy")
+    # publish_measurement()
+    publish_measurement_EE()
