@@ -863,9 +863,9 @@ class publish_measurement_server:
         self.pub_p_hat_w.publish(self.P_t_hat)
         # info = "measurement published!!!"
         info = "x,y,z,t={},{},{},{}".format(self.P_t_hat.vector.x,
-                                                                self.P_t_hat.vector.y,
-                                                                self.P_t_hat.vector.z,
-                                                                self.P_t_hat.header.stamp.secs+self.P_t_hat.header.stamp.nsecs/1e9)
+                                            self.P_t_hat.vector.y,
+                                            self.P_t_hat.vector.z,
+                                            self.P_t_hat.header.stamp.secs + self.P_t_hat.header.stamp.nsecs / 1e9)
         rospy.loginfo(info)
 
     def gotTriggerData(self, trigger):
@@ -953,12 +953,13 @@ class publish_measurement_server_EE:
         self.P_c_hat = np.zeros((4, 1))
         self.conf_Z = 0
 
-        self.myMessage = Vector3Stamped()
-        self.myMessage.vector.x = 0
-        self.myMessage.vector.y = 0
-        self.myMessage.vector.z = 0
-        self.myMessage.header.stamp = rospy.Time.now()
+        # self.myMessage = Vector3Stamped()
+        # self.myMessage.vector.x = 0
+        # self.myMessage.vector.y = 0
+        # self.myMessage.vector.z = 0
+        # self.myMessage.header.stamp = rospy.Time.now()
         self.pub_p_hat_w = rospy.Publisher('p_hat_w', Vector3Stamped, queue_size=10)
+        self.pub_p_hat_EE_w = rospy.Publisher('p_hat_EE_w', Vector3Stamped, queue_size=10)
         r_t2c = np.load("/home/user/code/zed-sdk/mahdi/log/hand_to_eye_calibration/two_t_on_table/r_t2c_1.npy")
         t_t2c = np.load("/home/user/code/zed-sdk/mahdi/log/hand_to_eye_calibration/two_t_on_table/t_t2c_1.npy")
         t_c2t = -np.matrix(cv2.Rodrigues(r_t2c[0])[0]).T * np.matrix(t_t2c[0])
@@ -966,6 +967,9 @@ class publish_measurement_server_EE:
         self.H_c2t = np.vstack((np.hstack((R_c2t, t_c2t.reshape(3, 1))),
                                 np.array([0, 0, 0, 1])))
         self.P_t_hat = Vector3Stamped()
+        self.P_t_hat_EE = Vector3Stamped()
+        # self.buffer=np.zeros((50,3))
+        # self.k=0
 
     def gotdata(self, color_image, depth_map, camera_info):
         fx = camera_info.K[0]
@@ -975,11 +979,12 @@ class publish_measurement_server_EE:
         A = np.array([[fx, 0, cx], [0, fy, cy], [0, 0, 1]])
         # self.t = color_image.header.stamp.secs + color_image.header.stamp.nsecs / 10 ** 9
         self.P_t_hat.header = color_image.header
+        self.P_t_hat_EE.header = color_image.header
         color_image = CvBridge().imgmsg_to_cv2(color_image, desired_encoding='passthrough')
-        u0 = int(0.4 * 1920)
-        v0 = int(0.15 * 1200)
-        uf = int(0.9 * 1920)
-        vf = int(0.65 * 1200)
+        u0 = int(0.5 * 1920)
+        v0 = int(0.07 * 1200)
+        uf = int(0.79 * 1920)
+        vf = int(0.62 * 1200)
         # color_image = color_image[v0:1200, u0:1920, :]
         color_image = color_image[v0:vf, u0:uf, :]
         # TODO subscribe directly to gray image?
@@ -987,51 +992,68 @@ class publish_measurement_server_EE:
         # TODO here is time consuming
         tags = self.at_detector.detect(gray, False, camera_params=None)
         # print("tags=",tags)
-        debug_color_img = color_image.astype(dtype="uint8")
-        for idx_tag in range(0,2):
-            tag = tags[idx_tag]
-            # ==========================================================
-            cv2.putText(debug_color_img, "idx_tag="+str(idx_tag),
-                        org=(tag.corners[0, 0].astype(int) - 50, tag.corners[0, 1].astype(int)-30),
-                        fontFace=cv2.FONT_HERSHEY_SIMPLEX,
-                        fontScale=0.5,
-                        color=(0, 0, 255))
-            for idx in range(len(tag.corners)):
-                # print(
-                #     "!!corner detected on image plane location = ({},{}) [pxls].".format(
-                #         tag.corners[idx, 0], tag.corners[idx, 1]))
 
-                cv2.line(debug_color_img, tuple(tag.corners[idx - 1, :].astype(int)),
-                         tuple(tag.corners[idx, :].astype(int)),
-                         (0, 255, 0))
-                cv2.drawMarker(debug_color_img, tuple(tag.corners[idx, :].astype(int)), color=(255, 0, 0))
-                cv2.putText(debug_color_img, str(idx),
-                            org=(tag.corners[idx, 0].astype(int) + 3, tag.corners[idx, 1].astype(int) + 3),
+        if False:
+            debug_color_img = color_image.astype(dtype="uint8")
+            for idx_tag in range(0, tags.__len__()):
+                tag = tags[idx_tag]
+                # ==========================================================
+                cv2.putText(debug_color_img, "idx_tag=" + str(idx_tag),
+                            org=(tag.corners[0, 0].astype(int) - 50, tag.corners[0, 1].astype(int) - 30),
                             fontFace=cv2.FONT_HERSHEY_SIMPLEX,
                             fontScale=0.5,
-                            color=(255, 0, 0))
-                cv2.line(debug_color_img, tuple(tag.corners[idx - 1, :].astype(int)),
-                         tuple(tag.corners[idx, :].astype(int)),
-                         (0, 255, 0))
-                cv2.drawMarker(debug_color_img, tuple(tag.corners[idx, :].astype(int)), color=(255, 0, 0))
-                cv2.putText(debug_color_img, str(idx),
-                            org=(tag.corners[idx, 0].astype(int) + 3, tag.corners[idx, 1].astype(int) + 3),
-                            fontFace=cv2.FONT_HERSHEY_SIMPLEX,
-                            fontScale=0.5,
-                            color=(255, 0, 0))
-        cv2_imshow(debug_color_img, window_name="Apriltag detections id={}".format(0))
+                            color=(0, 0, 255))
+                for idx in range(len(tag.corners)):
+                    # print(
+                    #     "!!corner detected on image plane location = ({},{}) [pxls].".format(
+                    #         tag.corners[idx, 0], tag.corners[idx, 1]))
+
+                    cv2.line(debug_color_img, tuple(tag.corners[idx - 1, :].astype(int)),
+                             tuple(tag.corners[idx, :].astype(int)),
+                             (0, 255, 0))
+                    cv2.drawMarker(debug_color_img, tuple(tag.corners[idx, :].astype(int)), color=(255, 0, 0))
+                    cv2.putText(debug_color_img, str(idx),
+                                org=(tag.corners[idx, 0].astype(int) + 3, tag.corners[idx, 1].astype(int) + 3),
+                                fontFace=cv2.FONT_HERSHEY_SIMPLEX,
+                                fontScale=0.5,
+                                color=(255, 0, 0))
+                    cv2.line(debug_color_img, tuple(tag.corners[idx - 1, :].astype(int)),
+                             tuple(tag.corners[idx, :].astype(int)),
+                             (0, 255, 0))
+                    cv2.drawMarker(debug_color_img, tuple(tag.corners[idx, :].astype(int)), color=(255, 0, 0))
+                    cv2.putText(debug_color_img, str(idx),
+                                org=(tag.corners[idx, 0].astype(int) + 3, tag.corners[idx, 1].astype(int) + 3),
+                                fontFace=cv2.FONT_HERSHEY_SIMPLEX,
+                                fontScale=0.5,
+                                color=(255, 0, 0))
+            cv2_imshow(debug_color_img, window_name="Apriltag detections id={}".format(0))
             # ==========================================================
 
         depth_map = np.array(CvBridge().imgmsg_to_cv2(depth_map, desired_encoding='passthrough'), dtype=np.float32)
 
-        idx_tag=0
+        idx_tag_EE = 0
+        idx_tag = 1
         # TODO change ordering here with specific nueric Apriltags automatically
-        # assumption below is that target tag is leftmost and upper than 435 pixel vertically
-            # if tags[i].corners[0,0]>tags[idx_tag].corners[0,0] and tags[i].corners[0,1]<435:
-        if tags[idx_tag].corners[0,1]>tags[idx_tag].corners[0,1]:
-                idx_tag = 1
-
+        # assumption moving target tag is below in pixels
+        if tags[idx_tag_EE].corners[0, 1] > tags[idx_tag].corners[0, 1]:
+            idx_tag_EE = 1
+            idx_tag = 0
+        # print("idx_tag={}, idx_tag_EE={}".format(idx_tag,idx_tag_EE))
         tag = tags[idx_tag]
+        u, v = tag.corners[2]
+        u = int(u) + u0
+        v = int(v) + v0
+        Z = np.nanmean(depth_map[v - 2: v + 2, u - 2: u + 2]) * 1000  # [mm]
+        X = Z * (u - A[0, 2]) / A[0, 0]  # [mm]
+        Y = Z * (v - A[1, 2]) / A[1, 1]  # [mm]
+        P_c_hat = np.array([[X], [Y], [Z], [1]])
+        P_t_hat = np.matrix(self.H_c2t) * np.matrix(P_c_hat.reshape(4, 1))
+        self.P_t_hat.vector.x = P_t_hat[0]
+        self.P_t_hat.vector.y = P_t_hat[1]
+        self.P_t_hat.vector.z = P_t_hat[2]
+        self.pub_p_hat_w.publish(self.P_t_hat)
+
+        tag = tags[idx_tag_EE]
         idx_edge = 0
         urd, vrd = tag.corners[idx_edge]
         urd = int(urd) + u0
@@ -1056,26 +1078,52 @@ class publish_measurement_server_EE:
         X2 = Z2 * (u2 - A[0, 2]) / A[0, 0]  # [mm]
         Y2 = Z2 * (v2 - A[1, 2]) / A[1, 1]  # [mm]
 
-        u_v1=np.array([X2-X1,Y2-Y1,Z2-Z1])/np.linalg.norm(np.array([X2-X1,Y2-Y1,Z2-Z1]))
-        u_v2=np.array([Xrd-X1,Yrd-Y1,Zrd-Z1])/np.linalg.norm(np.array([Xrd-X1,Yrd-Y1,Zrd-Z1]))
-        v1=31.6*u_v1
-        v2=87.3*u_v2
-        v3=-17.3*np.cross(u_v1, u_v2)
+        # idx_edge = 3
+        # u3, v3 = tag.corners[idx_edge]
+        # u3 = int(u3) + u0
+        # v3 = int(v3) + v0
+        # Z3 = np.nanmean(depth_map[v3 - 2: v3 + 2, u3 - 2: u3 + 2]) * 1000  # [mm]
+        # X3 = Z3 * (u3 - A[0, 2]) / A[0, 0]  # [mm]
+        # Y3 = Z3 * (v3 - A[1, 2]) / A[1, 1]  # [mm]
+
+        u_v1 = np.array([X2 - X1, Y2 - Y1, Z2 - Z1]) / np.linalg.norm(np.array([X2 - X1, Y2 - Y1, Z2 - Z1]))
+        u_v2 = np.array([Xrd - X1, Yrd - Y1, Zrd - Z1]) / np.linalg.norm(np.array([Xrd - X1, Yrd - Y1, Zrd - Z1]))
+        v1 = 33 * u_v1
+        v2 = 88 * u_v2 #tcp
+        # v2 = (88+64) * u_v2 #pen
+        # v2 = (87.3+14) * u_v2 #pin
+        v3 = -18.5 * np.cross(u_v1, u_v2)
 
         # P_c_hat = np.array([[X], [Y], [Z], [1]])
-        P_c_hat = np.hstack((np.array([X1,Y1,Z1])+v1 + v2 + v3, 1)).reshape(4,1)
-        P_t_hat = np.matrix(self.H_c2t) * np.matrix(P_c_hat.reshape(4, 1))
-        self.P_t_hat.vector.x = P_t_hat[0]
-        self.P_t_hat.vector.y = P_t_hat[1]
-        self.P_t_hat.vector.z = P_t_hat[2]
+        P_EE_c_hat = np.hstack((np.array([X1, Y1, Z1]) + v1 + v2 + v3, 1)).reshape(4, 1)
+        P_t_hat_EE = np.matrix(self.H_c2t) * np.matrix(P_EE_c_hat.reshape(4, 1))
+        self.P_t_hat_EE.vector.x = P_t_hat_EE[0]
+        self.P_t_hat_EE.vector.y = P_t_hat_EE[1]
+        self.P_t_hat_EE.vector.z = P_t_hat_EE[2]
 
-        self.pub_p_hat_w.publish(self.P_t_hat)
-        # info = "measurement published!!!"
-        info = "x,y,z,t={},{},{},{}".format(self.P_t_hat.vector.x,
-                                                                self.P_t_hat.vector.y,
-                                                                self.P_t_hat.vector.z,
-                                                                self.P_t_hat.header.stamp.secs+self.P_t_hat.header.stamp.nsecs/1e9)
-        rospy.loginfo(info)
+        self.pub_p_hat_EE_w.publish(self.P_t_hat_EE)
+
+        # if self.k<50:
+        #     self.buffer[self.k,:]=np.asarray(P_t_hat[:3]).squeeze()
+        #     self.k += 1
+        # elif self.k==50:
+        #     print("self.k=",self.k)
+        #     print("np.mean(self.buffer,0)=",np.mean(self.buffer,0))
+        # # info = "measurement published!!!"
+        # info = "x,y,z,t={},{},{},{}\n".format(self.P_t_hat.vector.x,
+        #                                     self.P_t_hat.vector.y,
+        #                                     self.P_t_hat.vector.z,
+        #                                     self.P_t_hat.header.stamp.secs + self.P_t_hat.header.stamp.nsecs / 1e9)
+        # rospy.loginfo(info)
+
+        # info = "x_EE,y_EE,z_EE,t_EE={},{},{},{}\n".format(self.P_t_hat_EE.vector.x,
+        #                                     self.P_t_hat_EE.vector.y,
+        #                                     self.P_t_hat_EE.vector.z,
+        #                                     self.P_t_hat_EE.header.stamp.secs + self.P_t_hat_EE.header.stamp.nsecs / 1e9)
+        # rospy.loginfo(info)
+        # info = "P_hat_EE-P_true={}".format(P_t_hat_EE[:3]-np.array([[523.4],[-276],[72]]))
+        # info = "P_hat_EE-P_true={}".format(P_t_hat_EE[:3]-np.array([[510],[-270],[65]]))
+        # rospy.loginfo(info)
 
 
 def publish_measurement_EE():
